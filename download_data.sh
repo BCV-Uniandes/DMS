@@ -110,6 +110,6 @@ if [ ! -d $_arg_path ]; then
 
     printf "Uncompressing data..."
 
-    tar -xzvf REFERIT_FILE
+    tar -xzvf $REFERIT_FILE
 
 fi
