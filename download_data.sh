@@ -109,14 +109,17 @@ if [ ! -d $_arg_path ]; then
     printf "Downloading ReferIt dataset (This may take a while...)"
     aria2c -x 8 $REFERIT_DATA_URL
 
-    printf "Downloading ReferIt Splits..."
-    aria2c -x 8 $REFERIT_SPLITS_URL
 
     printf "Uncompressing data..."
     tar -xzvf $REFERIT_FILE
+    rm $REFERIT_FILE
 
     mkdir splits
     cd splits
-    tar -xjvf $SPLIT_FILE
 
+    printf "Downloading ReferIt Splits..."
+    aria2c -x 8 $REFERIT_SPLITS_URL
+
+    tar -xjvf $SPLIT_FILE
+    rm $SPLIT_FILE
 fi
