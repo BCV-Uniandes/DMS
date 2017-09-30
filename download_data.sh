@@ -97,9 +97,10 @@ parse_commandline "$@"
 echo "Save data to: $_arg_path"
 
 
-
+REFERIT_SPLITS_URL="https://s3-sa-east-1.amazonaws.com/query-objseg/referit_splits.tar.bz2"
 REFERIT_DATA_URL="http://www.eecs.berkeley.edu/~ronghang/projects/cvpr16_text_obj_retrieval/referitdata.tar.gz"
 REFERIT_FILE=${REFERIT_DATA_URL#*cvpr16_text_obj_retrieval/}
+SPLIT_FILE=${REFERIT_SPLITS_URL#*query-objseg/}
 
 if [ ! -d $_arg_path ]; then
     mkdir $_arg_path
@@ -108,8 +109,14 @@ if [ ! -d $_arg_path ]; then
     printf "Downloading ReferIt dataset (This may take a while...)"
     aria2c -x 8 $REFERIT_DATA_URL
 
-    printf "Uncompressing data..."
+    printf "Downloading ReferIt Splits..."
+    aria2c -x 8 $REFERIT_SPLITS_URL
 
+    printf "Uncompressing data..."
     tar -xzvf $REFERIT_FILE
+
+    mkdir splits
+    cd splits
+    tar -xjvf $SPLIT_FILE
 
 fi
