@@ -12,6 +12,7 @@ import os
 import cv2
 import json
 import torch
+import progressbar
 import numpy as np
 import os.path as osp
 import scipy.io as sio
@@ -95,7 +96,8 @@ class ReferDataset(data.Dataset):
             self.corpus.load_file(vocab_file)
             torch.save(self.corpus, corpus_file)
 
-        for name in im_list:
+        bar = progressbar.ProgressBar()
+        for name in bar(im_list):
             im_filename = name.split('_', 1)[0] + '.jpg'
             mask_mat_filename = osp.join(self.mask_dir, name + '.mat')
             mask_pth_filename = osp.join(self.mask_dir, name + '.pth')
