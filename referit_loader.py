@@ -49,6 +49,10 @@ class ReferDataset(data.Dataset):
         self.train_val = self.train and self.val
         self.test = not (self.train or self.val)
 
+        self.im_dir = osp.join(self.data_root, 'images')
+        self.mask_dir = osp.join(self.data_root, 'mask')
+        self.split_dir = osp.join(self.data_root, 'splits')
+
         if not self.exists_dataset():
             self.process_dataset()
 
@@ -77,12 +81,10 @@ class ReferDataset(data.Dataset):
     def process_referit(self, setname, dataset_folder):
         split_dataset = []
 
-        im_dir = osp.join(self.data_root, 'images')
-        mask_dir = osp.join(self.data_root, 'mask')
-        split_dir = osp.join(self.data_root, 'splits')
         query_file = osp.join(
-            split_dir, 'referit', 'referit_query_{0}.json'.format(setname))
-        vocab_file = osp.join(split_dir, 'vocabulary_referit.txt')
+            self.split_dir, 'referit',
+            'referit_query_{0}.json'.format(setname))
+        vocab_file = osp.join(self.split_dir, 'vocabulary_referit.txt')
 
         query_dict = json.load(open(query_file))
         im_list = query_dict.keys()
@@ -94,15 +96,17 @@ class ReferDataset(data.Dataset):
             torch.save(self.corpus, corpus_file)
 
         for name in im_list:
-            im_filename = osp.join(im_dir, name.split('_', 1)[0] + '.jpg')
-            mask_filename = osp.join(mask_dir, name + '.mat')
-            mask = sio.loadmat(mask_filename)['segimg_t'] == 0
-            mask = mask.astype(np.float64)
-            mask = torch.from_numpy(mask)
-            img = cv2.imread(im_filename)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            im_filename = name.split('_', 1)[0] + '.jpg'
+            mask_mat_filename = osp.join(self.mask_dir, name + '.mat')
+            mask_pth_filename = osp.join(self.mask_dir, name + '.pth')
+            if osp.exists(mask_mat_filename):
+                mask = sio.loadmat(mask_mat_filename)['segimg_t'] == 0
+                mask = mask.astype(np.float64)
+                mask = torch.from_numpy(mask)
+                torch.save(mask, mask_pth_filename)
+                os.remove(mask_mat_filename)
             for query in query_dict[name]:
-                split_dataset.append((img, mask, self.corpus.tokenize(query)))
+                split_dataset.append((im_filename, name + '.pth', query))
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
