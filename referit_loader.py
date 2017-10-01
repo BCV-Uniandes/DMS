@@ -67,7 +67,7 @@ class ReferDataset(data.Dataset):
         if self.dataset != 'referit':
             self.dataset_root = osp.join(self.data_root, 'other')
             self.im_dir = osp.join(
-                self.dataset_root, 'images', 'mscoco', 'train2014')
+                self.dataset_root, 'images', 'mscoco', 'images', 'train2014')
             self.mask_dir = osp.join(self.dataset_root, self.dataset, 'mask')
 
         if not self.exists_dataset():
