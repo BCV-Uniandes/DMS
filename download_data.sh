@@ -100,9 +100,15 @@ echo "Save data to: $_arg_path"
 REFERIT_SPLITS_URL="https://s3-sa-east-1.amazonaws.com/query-objseg/referit_splits.tar.bz2"
 REFERIT_DATA_URL="http://www.eecs.berkeley.edu/~ronghang/projects/cvpr16_text_obj_retrieval/referitdata.tar.gz"
 COCO_DATA_URL="http://images.cocodataset.org/zips/train2014.zip"
+
+REFCOCO_URL="http://bvisionweb1.cs.unc.edu/licheng/referit/data/refcoco.zip"
+REFCOCO_PLUS_URL="http://bvisionweb1.cs.unc.edu/licheng/referit/data/refcoco+.zip"
+REFCOCOG_URL="http://bvisionweb1.cs.unc.edu/licheng/referit/data/refcocog.zip"
+
 REFERIT_FILE=${REFERIT_DATA_URL#*cvpr16_text_obj_retrieval/}
 SPLIT_FILE=${REFERIT_SPLITS_URL#*query-objseg/}
 COCO_FILE=${COCO_DATA_URL#*zips/}
+
 
 if [ ! -d $_arg_path ]; then
     mkdir $_arg_path
@@ -128,12 +134,21 @@ if [ ! -d $_arg_path ]; then
 
     cd ../..
 
-    mkdir coco
-    cd coco
+    mkdir -p other/images/mscoco/images
+    cd other/images/mscoco/images
 
     printf "Downloading MS COCO 2014 train images (This may take a while...)"
     aria2c -x 8 $COCO_DATA_URL
 
     unzip $COCO_FILE
     rm $COCO_FILE
+
+    cd ../../..
+    printf "Downloading refcoco, refcocog and refcoco+ splits..."
+    aria2c -x 8 REFCOCO_URL
+    aria2c -x 8 REFCOCO_PLUS_URL
+    aria2c -x 8 REFCOCOG_URL
+
+    unzip "*.zip"
+    rm *.zip
 fi
