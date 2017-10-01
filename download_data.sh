@@ -147,9 +147,9 @@ if [ ! -d $_arg_path ]; then
 
     cd ../../..
     printf "Downloading refcoco, refcocog and refcoco+ splits..."
-    aria2c -x 8 REFCOCO_URL
-    aria2c -x 8 REFCOCO_PLUS_URL
-    aria2c -x 8 REFCOCOG_URL
+    aria2c -x 8 $REFCOCO_URL
+    aria2c -x 8 $REFCOCO_PLUS_URL
+    aria2c -x 8 $REFCOCOG_URL
 
     unzip "*.zip"
     rm *.zip
