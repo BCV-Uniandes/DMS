@@ -72,7 +72,7 @@ class ReferDataset(data.Dataset):
 
         for split in ('train', 'trainval', 'val', 'test'):
             print('Processing {0}: {1} set'.format(self.dataset, split))
-            data_func(split)
+            data_func(split, dataset_folder)
 
     def process_referit(self, setname, dataset_folder):
         split_dataset = []
