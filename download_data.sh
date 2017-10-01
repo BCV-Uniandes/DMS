@@ -99,13 +99,16 @@ echo "Save data to: $_arg_path"
 
 REFERIT_SPLITS_URL="https://s3-sa-east-1.amazonaws.com/query-objseg/referit_splits.tar.bz2"
 REFERIT_DATA_URL="http://www.eecs.berkeley.edu/~ronghang/projects/cvpr16_text_obj_retrieval/referitdata.tar.gz"
+COCO_DATA_URL="http://images.cocodataset.org/zips/train2014.zip"
 REFERIT_FILE=${REFERIT_DATA_URL#*cvpr16_text_obj_retrieval/}
 SPLIT_FILE=${REFERIT_SPLITS_URL#*query-objseg/}
+COCO_FILE=${COCO_DATA_URL#*zips/}
 
 if [ ! -d $_arg_path ]; then
     mkdir $_arg_path
     cd $_arg_path
 
+    cd referit
     printf "Downloading ReferIt dataset (This may take a while...)"
     aria2c -x 8 $REFERIT_DATA_URL
 
@@ -122,4 +125,15 @@ if [ ! -d $_arg_path ]; then
 
     tar -xjvf $SPLIT_FILE
     rm $SPLIT_FILE
+
+    cd ../..
+
+    mkdir coco
+    cd coco
+
+    printf "Downloading MS COCO 2014 train images (This may take a while...)"
+    aria2c -x 8 $COCO_DATA_URL
+
+    unzip $COCO_FILE
+    rm $COCO_FILE
 fi

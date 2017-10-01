@@ -29,15 +29,24 @@ class DatasetNotFoundError(Exception):
 
 class ReferDataset(data.Dataset):
     SUPPORTED_DATASETS = {
-        'referit': {},
-        'unc': {'dataset': 'refcoco', 'split_by': 'unc'},
-        'unc+': {'dataset': 'refcoco+', 'split_by': 'unc'},
-        'gref': {'dataset': 'refcocog', 'split_by': 'google'}
+        'referit': {'splits': ('train', 'val', 'trainval', 'test')},
+        'unc': {
+            'splits': ('train', 'val', 'testA', 'testB'),
+            'params': {'dataset': 'refcoco', 'split_by': 'unc'}
+        },
+        'unc+': {
+            'splits': ('train', 'val', 'testA', 'testB'),
+            'params': {'dataset': 'refcoco+', 'split_by': 'unc'}
+        },
+        'gref': {
+            'splits': ('train', 'val'),
+            'params': {'dataset': 'refcocog', 'split_by': 'google'}
+        }
     }
 
     def __init__(self, data_root, split_root='data', dataset='referit',
                  transform=None, annotation_transform=None,
-                 train=True, val=False, max_query_len=20):
+                 train=True, val=False, a_set=True, max_query_len=20):
         self.images = []
         self.data_root = data_root
         self.split_root = split_root
@@ -50,9 +59,15 @@ class ReferDataset(data.Dataset):
         self.train_val = self.train and self.val
         self.test = not (self.train or self.val)
 
-        self.im_dir = osp.join(self.data_root, 'images')
-        self.mask_dir = osp.join(self.data_root, 'mask')
-        self.split_dir = osp.join(self.data_root, 'splits')
+        self.dataset_root = osp.join(self.data_root, 'referit')
+        self.im_dir = osp.join(self.dataset_root, 'images')
+        self.mask_dir = osp.join(self.dataset_root, 'mask')
+        self.split_dir = osp.join(self.dataset_root, 'splits')
+
+        if self.dataset != 'referit':
+            self.dataset_root = osp.join(self.data_root, 'coco')
+            self.im_dir = osp.join(self.dataset_root, 'train2014')
+            self.mask_dir = osp.join(self.dataset_root, 'mask')
 
         if not self.exists_dataset():
             self.process_dataset()
@@ -75,7 +90,9 @@ class ReferDataset(data.Dataset):
         else:
             data_func = self.process_coco
 
-        for split in ('train', 'trainval', 'val', 'test'):
+        splits = self.SUPPORTED_DATASETS[self.dataset]['splits']
+
+        for split in splits:
             print('Processing {0}: {1} set'.format(self.dataset, split))
             data_func(split, dataset_folder)
 
@@ -112,3 +129,5 @@ class ReferDataset(data.Dataset):
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
+
+
