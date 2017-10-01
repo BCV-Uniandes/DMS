@@ -65,9 +65,10 @@ class ReferDataset(data.Dataset):
         self.split_dir = osp.join(self.dataset_root, 'splits')
 
         if self.dataset != 'referit':
-            self.dataset_root = osp.join(self.data_root, 'coco')
-            self.im_dir = osp.join(self.dataset_root, 'train2014')
-            self.mask_dir = osp.join(self.dataset_root, 'mask')
+            self.dataset_root = osp.join(self.data_root, 'other')
+            self.im_dir = osp.join(
+                self.dataset_root, 'images', 'mscoco', 'train2014')
+            self.mask_dir = osp.join(self.dataset_root, self.dataset, 'mask')
 
         if not self.exists_dataset():
             self.process_dataset()
@@ -130,4 +131,40 @@ class ReferDataset(data.Dataset):
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
 
+    def process_coco(self, setname, dataset_folder):
+        split_dataset = []
+        vocab_file = osp.join(self.split_dir, 'vocabulary_Gref.txt')
 
+        refer = REFER(
+            self.dataset_root, **(
+                self.SUPPORTED_DATASETS[self.dataset]['params']))
+
+        refs = [refer.refs[ref_id] for ref_id in refer.refs
+                if refer.refs[ref_id]['split'] == setname]
+
+        if len(self.corpus) == 0:
+            print('Saving dataset corpus dictionary...')
+            corpus_file = osp.join(self.split_root, self.dataset, 'corpus.pth')
+            self.corpus.load_file(vocab_file)
+            torch.save(self.corpus, corpus_file)
+
+        if not osp.exists(self.mask_dir):
+            os.makedirs(self.mask_dir)
+
+        bar = progressbar.ProgressBar()
+        for ref in bar(refs):
+            img_filename = 'COCO_train2014_{0}.jpg'.format(
+                str(ref['image_id']).zfill(12))
+            h, w, _ = cv2.imread(osp.join(self.im_dir, img_filename)).shape
+            seg = refer.anns[ref['ann_id']]['segmentation']
+            rle = cocomask.frPyObjects(seg, h, w)
+            mask = np.max(cocomask.decode(rle), axis=2).astype(np.float32)
+            mask = torch.from_numpy(mask)
+            mask_file = str(ref['image_id']).zfill(12) + '.pth'
+            mask_filename = osp.join(self.mask_dir, mask_file)
+            torch.save(mask, mask_filename)
+            for sentence in ref['sentences']:
+                split_dataset.append((img_filename, mask_file, sentence))
+
+        output_file = '{0}_{1}.pth'.format(self.dataset, setname)
+        torch.save(split_dataset, osp.join(dataset_folder, output_file))
