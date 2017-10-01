@@ -114,7 +114,9 @@ if [ ! -d $_arg_path ]; then
     mkdir $_arg_path
     cd $_arg_path
 
+    mkdir referit
     cd referit
+
     printf "Downloading ReferIt dataset (This may take a while...)"
     aria2c -x 8 $REFERIT_DATA_URL
 
