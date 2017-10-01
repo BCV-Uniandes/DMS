@@ -158,6 +158,8 @@ class ReferDataset(data.Dataset):
             h, w, _ = cv2.imread(osp.join(self.im_dir, img_filename)).shape
             seg = refer.anns[ref['ann_id']]['segmentation']
             rle = cocomask.frPyObjects(seg, h, w)
+            for mask in rle:
+                mask['count'] = mask['count'].decode()
             mask = np.max(cocomask.decode(rle), axis=2).astype(np.float32)
             mask = torch.from_numpy(mask)
             mask_file = str(ref['image_id']).zfill(12) + '.pth'
