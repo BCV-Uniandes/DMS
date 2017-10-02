@@ -20,7 +20,7 @@ from referit import REFER
 import torch.utils.data as data
 from referit.refer import mask as cocomask
 
-from word_utils import Corpus
+from utils.word_utils import Corpus
 
 
 class DatasetNotFoundError(Exception):
@@ -46,7 +46,7 @@ class ReferDataset(data.Dataset):
 
     def __init__(self, data_root, split_root='data', dataset='referit',
                  transform=None, annotation_transform=None,
-                 train=True, val=False, a_set=True, max_query_len=20):
+                 split='train', max_query_len=20):
         self.images = []
         self.data_root = data_root
         self.split_root = split_root
@@ -54,10 +54,7 @@ class ReferDataset(data.Dataset):
         self.corpus = Corpus(max_len=max_query_len)
         self.transform = transform
         self.annotation_transform = annotation_transform
-        self.train = train
-        self.val = val
-        self.train_val = self.train and self.val
-        self.test = not (self.train or self.val)
+        self.split = split
 
         self.dataset_root = osp.join(self.data_root, 'referit')
         self.im_dir = osp.join(self.dataset_root, 'images')
@@ -72,6 +69,21 @@ class ReferDataset(data.Dataset):
 
         if not self.exists_dataset():
             self.process_dataset()
+
+        dataset_path = osp.join(self.split_root, self.dataset)
+        corpus_path = osp.join(dataset_path, 'corpus.pth')
+        valid_splits = self.SUPPORTED_DATASETS[self.dataset]
+
+        if split not in valid_splits:
+            raise ValueError(
+                'Dataset {0} does not have split {1}'.format(
+                    self.dataset, split))
+
+        self.corpus = torch.load(corpus_path)
+
+        imgset_file = '{0}_{1}.pth'.format(self.dataset, split)
+        imgset_path = osp.join(dataset_path, imgset_file)
+        self.images = torch.load(imgset_path)
 
     def exists_dataset(self):
         return osp.exists(osp.join(self.split_root, self.dataset))
@@ -168,3 +180,27 @@ class ReferDataset(data.Dataset):
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
+
+    def pull_item(self, idx):
+        img_file, mask_file, phrase = self.images[idx]
+
+        img_path = osp.join(self.im_dir, img_file)
+        img = cv2.imread(img_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        mask_path = osp.join(self.mask_dir, mask_file)
+        mask = torch.load(mask_path)
+
+        return img, mask, phrase
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        img, mask, phrase = self.pull_item(idx)
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.annotation_transform is not None:
+            mask = self.annotation_transform(mask)
+        phrase = self.corpus.tokenize(phrase)
+        return img, mask, phrase
