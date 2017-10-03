@@ -72,7 +72,7 @@ class ReferDataset(data.Dataset):
 
         dataset_path = osp.join(self.split_root, self.dataset)
         corpus_path = osp.join(dataset_path, 'corpus.pth')
-        valid_splits = self.SUPPORTED_DATASETS[self.dataset]
+        valid_splits = self.SUPPORTED_DATASETS[self.dataset]['splits']
 
         if split not in valid_splits:
             raise ValueError(
