@@ -174,7 +174,8 @@ class ReferDataset(data.Dataset):
             mask = torch.from_numpy(mask)
             mask_file = str(ref['image_id']).zfill(12) + '.pth'
             mask_filename = osp.join(self.mask_dir, mask_file)
-            torch.save(mask, mask_filename)
+            if not osp.exists(mask_filename):
+                torch.save(mask, mask_filename)
             for sentence in ref['sentences']:
                 split_dataset.append((img_filename, mask_file, sentence))
 
