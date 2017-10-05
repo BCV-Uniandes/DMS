@@ -6,4 +6,4 @@
 # (see LICENSE for details)
 # -----------------------------------------------------------------------------
 
-"""Misc data and other helping utillites."""
+"""PyTorch models."""
