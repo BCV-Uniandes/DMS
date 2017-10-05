@@ -10,8 +10,8 @@ https://github.com/jihunchoi/recurrent-batch-normalization-pytorch/blob/master/b
 import math
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.autograd import Variable
-from torch.nn import functional, init
 
 
 class vLSTMCell(nn.Module):
@@ -27,6 +27,12 @@ class vLSTMCell(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.use_bias = use_bias
+        self.weight_a = nn.Parameter(
+            torch.FloatTensor(visual_size, visual_size))
+        self.weight_he = nn.Parameter(
+            torch.FloatTensor(hidden_size, visual_size))
+        self.weight_ce = nn.Parameter(
+            torch.FloatTensor(visual_size, visual_size))
         self.weight_ih = nn.Parameter(
             torch.FloatTensor(input_size, 4 * hidden_size))
         self.weight_hh = nn.Parameter(
@@ -35,32 +41,22 @@ class vLSTMCell(nn.Module):
             torch.FloatTensor(visual_size, 4 * hidden_size))
         if use_bias:
             self.bias = nn.Parameter(torch.FloatTensor(4 * hidden_size))
+            self.comp_bias = nn.Parameter(torch.FloatTensor(visual_size))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
-
-    # def reset_parameters(self):
-    #     """
-    #     Initialize parameters following the way proposed in the paper.
-    #     """
-
-    #     init.orthogonal(self.weight_ih.data)
-    #     weight_hh_data = torch.eye(self.hidden_size)
-    #     weight_hh_data = weight_hh_data.repeat(1, 4)
-    #     self.weight_hh.data.set_(weight_hh_data)
-    #     # The bias is just set to zero vectors.
-    #     if self.use_bias:
-    #         init.constant(self.bias.data, val=0)
 
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-    def forward(self, input_, hx):
+    def forward(self, input_, features, hx):
         """
         Args:
             input_: A (batch, input_size) tensor containing input
+                features.
+            features: A (batch, visual_size) tensor containing convolutional
                 features.
             hx: A tuple (h_0, c_0), which contains the initial hidden
                 and cell state, where the size of both states is
@@ -70,12 +66,19 @@ class vLSTMCell(nn.Module):
             h_1, c_1: Tensors containing the next hidden and cell state.
         """
 
-        h_0, c_0, v_0 = hx
+        h_0, c_0 = hx
         batch_size = h_0.size(0)
         bias_batch = (self.bias.unsqueeze(0)
                       .expand(batch_size, *self.bias.size()))
         wh_b = torch.addmm(bias_batch, h_0, self.weight_hh)
         wi = torch.mm(input_, self.weight_ih)
+
+        h_e = torch.mm(h_0, self.weight_he)
+        c_e = torch.mm(features, self.weight_ce)
+        e = torch.addmm(self.comp_bias, torch.tanh(h_e + c_e), self.weight_a)
+        a = F.softmax(e)
+        v_0 = features * a
+
         wv = torch.mm(v_0, self.weight_vh)
         f, i, o, g = torch.split(wh_b + wi + wv,
                                  split_size=self.hidden_size, dim=1)
@@ -88,13 +91,13 @@ class vLSTMCell(nn.Module):
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
-class LSTM(nn.Module):
+class vLSTM(nn.Module):
 
-    """A module that runs multiple steps of LSTM."""
+    """A module that runs multiple steps of vLSTM."""
 
     def __init__(self, cell_class, input_size, hidden_size, num_layers=1,
                  use_bias=True, batch_first=False, dropout=0, **kwargs):
-        super(LSTM, self).__init__()
+        super(vLSTM, self).__init__()
         self.cell_class = cell_class
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -121,24 +124,25 @@ class LSTM(nn.Module):
             cell.reset_parameters()
 
     @staticmethod
-    def _forward_rnn(cell, input_, length, hx):
+    def _forward_rnn(cell, input_, features, length, hx):
         max_time = input_.size(0)
         output = []
         for time in range(max_time):
-            if isinstance(cell, BNLSTMCell):
-                h_next, c_next = cell(input_=input_[time], hx=hx, time=time)
-            else:
-                h_next, c_next = cell(input_=input_[time], hx=hx)
+            # if isinstance(cell, BNLSTMCell):
+            #     h_next, c_next = cell(input_=input_[time], hx=hx, time=time)
+            # else:
+            h_next, c_next = cell(
+                input_=input_[time], features=features, hx=hx)
             mask = (time < length).float().unsqueeze(1).expand_as(h_next)
-            h_next = h_next*mask + hx[0]*(1 - mask)
-            c_next = c_next*mask + hx[1]*(1 - mask)
+            h_next = h_next * mask + hx[0] * (1 - mask)
+            c_next = c_next * mask + hx[1] * (1 - mask)
             hx_next = (h_next, c_next)
             output.append(h_next)
             hx = hx_next
         output = torch.stack(output, 0)
         return output, hx
 
-    def forward(self, input_, length=None, hx=None):
+    def forward(self, input_, features, length=None, hx=None):
         if self.batch_first:
             input_ = input_.transpose(0, 1)
         max_time, batch_size, _ = input_.size()
@@ -148,15 +152,17 @@ class LSTM(nn.Module):
                 device = input_.get_device()
                 length = length.cuda(device)
         if hx is None:
-            hx = Variable(input_.data.new(batch_size, self.hidden_size).zero_())
+            hx = Variable(input_.data.new(
+                batch_size, self.hidden_size).zero_())
             hx = (hx, hx)
         h_n = []
         c_n = []
         layer_output = None
         for layer in range(self.num_layers):
             cell = self.get_cell(layer)
-            layer_output, (layer_h_n, layer_c_n) = LSTM._forward_rnn(
-                cell=cell, input_=input_, length=length, hx=hx)
+            layer_output, (layer_h_n, layer_c_n) = vLSTM._forward_rnn(
+                cell=cell, input_=input_, features=features,
+                length=length, hx=hx)
             input_ = self.dropout_layer(layer_output)
             h_n.append(layer_h_n)
             c_n.append(layer_c_n)
