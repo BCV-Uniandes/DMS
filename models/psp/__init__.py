@@ -10,3 +10,6 @@
 # -----------------------------------------------------------------------------
 
 """PSPNet PyTorch implementation."""
+
+from .pspnet import PSPNet
+PSPNet
