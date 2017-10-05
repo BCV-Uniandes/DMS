@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Implementation of visual-LSTM (vLSTM)
+Implementation of Visual Attention LSTM (vLSTM)
+
+Yuke Zhu, Oliver Groth, Michael S. Bernstein, Li Fei-Fei:
+Visual7W: Grounded Question Answering in Images. CoRR abs/1511.03416 (2015)
+https://arxiv.org/pdf/1511.03416.pdf
 
 Based on:
 https://github.com/jihunchoi/recurrent-batch-normalization-pytorch/blob/master/bnlstm.py
