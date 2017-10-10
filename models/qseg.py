@@ -14,6 +14,7 @@ class QSegNet(nn.Module):
     def __init__(self, in_size, vis_size, hid_size, dropout=0.2,
                  num_lstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054):
+        super().__init__()
         self.psp = PSPNet(n_classes=1, psp_size=psp_size,
                           pretrained=pretrained, backend=backend)
         self.vlstm = VILSTM(
