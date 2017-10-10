@@ -9,4 +9,9 @@
 """PyTorch models."""
 
 from .vlstm import vLSTM
+from .psp.pspnet import PSPNet, PSPModule, PSPUpsample
+
 vLSTM
+PSPNet
+PSPModule,
+PSPUpsample

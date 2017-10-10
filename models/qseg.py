@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from psp import PSPNet
-from vlstm import vLSTM, vLSTMCell
+from vilstm import VILSTM, VILSTMCell
 
 
 class QSegNet(nn.Module):
@@ -17,6 +17,6 @@ class QSegNet(nn.Module):
                  pretrained=True, batch_first=True):
         self.visual_size = 1024
         self.psp = PSPNet(n_classes=1, pretrained=pretrained)
-        self.vlstm = vLSTM(
-            vLSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
+        self.vlstm = VILSTM(
+            VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
             batch_first=batch_first, visual_size=self.visual_size)

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Implementation of Visual Attention LSTM (vLSTM)
+Implementation of Visual Attention LSTM (VILSTM)
 
 Yuke Zhu, Oliver Groth, Michael S. Bernstein, Li Fei-Fei:
 Visual7W: Grounded Question Answering in Images. CoRR abs/1511.03416 (2015)
-https://arxiv.org/pdf/1511.03416.pdf
+https://arxiv.org/pdf/1511.03416.pd1f
 
 Based on:
 https://github.com/jihunchoi/recurrent-batch-normalization-pytorch/blob/master/bnlstm.py
@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
-class vLSTMCell(nn.Module):
+class VILSTMCell(nn.Module):
 
     """A basic Visual Attention LSTM cell."""
 
@@ -27,7 +27,7 @@ class vLSTMCell(nn.Module):
         Most parts are copied from torch.nn.LSTMCell.
         """
 
-        super(vLSTMCell, self).__init__()
+        super(VILSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.use_bias = use_bias
@@ -95,13 +95,13 @@ class vLSTMCell(nn.Module):
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
-class vLSTM(nn.Module):
+class VILSTM(nn.Module):
 
-    """A module that runs multiple steps of vLSTM."""
+    """A module that runs multiple steps of VILSTM."""
 
     def __init__(self, cell_class, input_size, hidden_size, num_layers=1,
                  use_bias=True, batch_first=False, dropout=0, **kwargs):
-        super(vLSTM, self).__init__()
+        super(VILSTM, self).__init__()
         self.cell_class = cell_class
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -164,7 +164,7 @@ class vLSTM(nn.Module):
         layer_output = None
         for layer in range(self.num_layers):
             cell = self.get_cell(layer)
-            layer_output, (layer_h_n, layer_c_n) = vLSTM._forward_rnn(
+            layer_output, (layer_h_n, layer_c_n) = VILSTM._forward_rnn(
                 cell=cell, input_=input_, features=features,
                 length=length, hx=hx)
             input_ = self.dropout_layer(layer_output)
