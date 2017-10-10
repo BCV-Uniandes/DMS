@@ -33,3 +33,6 @@ refer = ReferDataset(data_root='/mnt/referit_data',
                      dataset='referit',
                      transform=input_transform,
                      annotation_transform=target_transform)
+
+loader = DataLoader(refer, batch_size=10, shuffle=True)
+

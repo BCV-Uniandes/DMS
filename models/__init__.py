@@ -8,10 +8,10 @@
 
 """PyTorch models."""
 
-from .vlstm import vLSTM
+from .vilstm import VILSTM
 from .psp.pspnet import PSPNet, PSPModule, PSPUpsample
 
-vLSTM
+VILSTM
 PSPNet
 PSPModule,
 PSPUpsample
