@@ -40,9 +40,11 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, max_len=20):
+    def __init__(self):
         self.dictionary = Dictionary()
-        self.max_len = max_len
+
+    def set_max_len(self, value):
+        self.max_len = value
 
     def load_file(self, filename):
         with codecs.open(filename, 'r', 'utf-8') as f:
@@ -61,7 +63,7 @@ class Corpus(object):
             word = word.lower()
             self.dictionary.add_word(word)
 
-    def tokenize(self, line):
+    def tokenize(self, line, max_len=20):
         # Tokenize line contents
         words = SENTENCE_SPLIT_REGEX.split(line.strip())
         words = [w.lower() for w in words if len(w) > 0]
@@ -69,10 +71,10 @@ class Corpus(object):
         if words[-1] == '.':
             words = words[:-1]
 
-        if len(words) > self.max_len:
-            words = words[:self.max_len]
-        elif len(words) < self.max_len:
-            words = [PAD_TOKEN] * (self.max_len - len(words)) + words
+        if len(words) > max_len:
+            words = words[:max_len]
+        elif len(words) < max_len:
+            words = [PAD_TOKEN] * (max_len - len(words)) + words
 
         tokens = len(words)
         ids = torch.LongTensor(tokens)

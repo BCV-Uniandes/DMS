@@ -51,7 +51,8 @@ class ReferDataset(data.Dataset):
         self.data_root = data_root
         self.split_root = split_root
         self.dataset = dataset
-        self.corpus = Corpus(max_len=max_query_len)
+        self.query_len = max_query_len
+        self.corpus = Corpus()
         self.transform = transform
         self.annotation_transform = annotation_transform
         self.split = split
@@ -205,5 +206,5 @@ class ReferDataset(data.Dataset):
             # mask = mask.unsqueeze(-1)
             mask = mask.byte() * 255
             mask = self.annotation_transform(mask)
-        phrase = self.corpus.tokenize(phrase)
+        phrase = self.corpus.tokenize(phrase, self.query_len)
         return img, mask, phrase
