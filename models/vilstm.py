@@ -22,7 +22,8 @@ class VILSTMCell(nn.Module):
 
     """A basic Visual Attention LSTM cell."""
 
-    def __init__(self, input_size, hidden_size, visual_size, use_bias=True):
+    def __init__(self, input_size, hidden_size, visual_size,
+                 mix_size, use_bias=True):
         """
         Most parts are copied from torch.nn.LSTMCell.
         """
@@ -32,11 +33,11 @@ class VILSTMCell(nn.Module):
         self.hidden_size = hidden_size
         self.use_bias = use_bias
         self.weight_a = nn.Parameter(
-            torch.FloatTensor(visual_size, visual_size))
+            torch.FloatTensor(mix_size, visual_size))
         self.weight_he = nn.Parameter(
-            torch.FloatTensor(hidden_size, visual_size))
+            torch.FloatTensor(hidden_size, mix_size))
         self.weight_ce = nn.Parameter(
-            torch.FloatTensor(visual_size, visual_size))
+            torch.FloatTensor(visual_size, mix_size))
         self.weight_ih = nn.Parameter(
             torch.FloatTensor(input_size, 4 * hidden_size))
         self.weight_hh = nn.Parameter(
@@ -45,7 +46,7 @@ class VILSTMCell(nn.Module):
             torch.FloatTensor(visual_size, 4 * hidden_size))
         if use_bias:
             self.bias = nn.Parameter(torch.FloatTensor(4 * hidden_size))
-            self.comp_bias = nn.Parameter(torch.FloatTensor(visual_size))
+            self.comp_bias = nn.Parameter(torch.FloatTensor(mix_size))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
@@ -79,7 +80,8 @@ class VILSTMCell(nn.Module):
 
         h_e = torch.mm(h_0, self.weight_he)
         c_e = torch.mm(features, self.weight_ce)
-        e = torch.addmm(self.comp_bias, torch.tanh(h_e + c_e), self.weight_a)
+        e_i = torch.add(torch.tanh(h_e + c_e), self.comp_bias)
+        e = torch.mm(e_i, self.weight_a)
         a = F.softmax(e)
         v_0 = features * a
 
