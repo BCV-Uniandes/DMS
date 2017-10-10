@@ -85,11 +85,11 @@ class PSPNet(nn.Module):
     def forward(self, x):
         # class_f has 1024 channels and is 8x downsampled
         f, class_f = self.feats(x)
-        p = self.psp(f)
-        p = self.drop_1(p)
+        sample_p = self.psp(f)
+        p = self.drop_1(sample_p)
 
-        sample_p = self.up_1(p)
-        p = self.drop_2(sample_p)
+        p = self.up_1(p)
+        p = self.drop_2(p)
 
         p = self.up_2(p)
         p = self.drop_2(p)
