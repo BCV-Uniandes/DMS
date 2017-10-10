@@ -14,6 +14,7 @@ from torchvision.transforms import (
 
 from utils.transforms import ResizePad, ToNumpy
 from models import PSPNet
+from models import QSegNet
 
 input_transform = Compose([
     # ToPILImage(),
@@ -41,12 +42,17 @@ refer = ReferDataset(data_root='/mnt/referit_data',
 loader = DataLoader(refer, batch_size=10, shuffle=True)
 
 imgs, masks, words = next(iter(loader))
-x = Variable(imgs, requires_grad=False, volatile=True)
-x = x.cuda()
-
-net = PSPNet(n_classes=1, backend='densenet', psp_size=1024)
+net = QSegNet(500, (1024 / 64) * 304 * 304, (1024 / 64) * 304 * 304,
+              dict_size=len(refer.corpus))
 net.cuda()
-out = net(x).squeeze()
+x = Variable(imgs)
+x = x.cuda()
+w = Variable(words)
+w = w.cuda()
 
-emb = nn.Embedding(len(refer.corpus), 500)
-wemb = emb(words)
+# net = PSPNet(n_classes=1, backend='densenet', psp_size=1024)
+# net.cuda()
+# out = net(x).squeeze()
+
+# emb = nn.Embedding(len(refer.corpus), 500)
+# wemb = emb(words)

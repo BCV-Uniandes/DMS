@@ -9,9 +9,11 @@
 """PyTorch models."""
 
 from .vilstm import VILSTM
+from .qseg import QSegNet
 from .psp.pspnet import PSPNet, PSPModule, PSPUpsample
 
 VILSTM
 PSPNet
 PSPModule,
 PSPUpsample
+QSegNet

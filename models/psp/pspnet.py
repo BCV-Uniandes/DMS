@@ -66,15 +66,15 @@ class PSPNet(nn.Module):
         self.psp = PSPModule(psp_size, 1024, sizes)
         self.drop_1 = nn.Dropout2d(p=0.3)
 
-        self.up_1 = PSPUpsample(1024, 256)
-        self.up_2 = PSPUpsample(256, 64)
-        self.up_3 = PSPUpsample(64, 64)
+        # self.up_1 = PSPUpsample(1024, 256)
+        # self.up_2 = PSPUpsample(256, 64)
+        # self.up_3 = PSPUpsample(64, 64)
 
-        self.drop_2 = nn.Dropout2d(p=0.15)
-        self.final = nn.Sequential(
-            nn.Conv2d(64, n_classes, kernel_size=1),
-            nn.LogSoftmax()
-        )
+        # self.drop_2 = nn.Dropout2d(p=0.15)
+        # self.final = nn.Sequential(
+        #     nn.Conv2d(64, n_classes, kernel_size=1),
+        #     nn.LogSoftmax()
+        # )
 
         # self.classifier = nn.Sequential(
         #     nn.Linear(deep_features_size, 256),
@@ -84,25 +84,20 @@ class PSPNet(nn.Module):
 
     def forward(self, x):
         # class_f has 1024 channels and is 8x downsampled
-        sources = []
         f, class_f = self.feats(x)
         p = self.psp(f)
         p = self.drop_1(p)
-        sources.append(p)
 
-        p = self.up_1(p)
-        p = self.drop_2(p)
-        sources.append(p)
+        # p = self.up_1(p)
+        # p = self.drop_2(p)
 
-        p = self.up_2(p)
-        p = self.drop_2(p)
-        sources.append(p)
+        # p = self.up_2(p)
+        # p = self.drop_2(p)
 
-        p = self.up_3(p)
-        p = self.drop_2(p)
-        sources.append(p)
+        # p = self.up_3(p)
+        # p = self.drop_2(p)
 
         # auxiliary = F.adaptive_max_pool2d(
         #     input=class_f, output_size=(1, 1)).view(-1, class_f.size(1))
 
-        return sources, self.final(p)  # , self.classifier(auxiliary)
+        return p  # self.final(p), self.classifier(auxiliary)
