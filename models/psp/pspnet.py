@@ -76,11 +76,11 @@ class PSPNet(nn.Module):
             nn.LogSoftmax()
         )
 
-        self.classifier = nn.Sequential(
-            nn.Linear(deep_features_size, 256),
-            nn.ReLU(),
-            nn.Linear(256, n_classes)
-        )
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(deep_features_size, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, n_classes)
+        # )
 
     def forward(self, x):
         # class_f has 1024 channels and is 8x downsampled
@@ -97,7 +97,7 @@ class PSPNet(nn.Module):
         p = self.up_3(p)
         p = self.drop_2(p)
 
-        auxiliary = F.adaptive_max_pool2d(
-            input=class_f, output_size=(1, 1)).view(-1, class_f.size(1))
+        # auxiliary = F.adaptive_max_pool2d(
+        #     input=class_f, output_size=(1, 1)).view(-1, class_f.size(1))
 
-        return self.final(p), self.classifier(auxiliary)
+        return self.final(p)  # , self.classifier(auxiliary)

@@ -5,18 +5,20 @@ QSegNet train routines. (WIP)
 """
 
 import torch
+from torch.autograd import Variable
 from referit_loader import ReferDataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import (
     Compose, Scale, CenterCrop, ToPILImage, ToTensor, Normalize)
 
 from utils.transforms import ResizePad, ToNumpy
+from models import PSPNet
 
 input_transform = Compose([
     # ToPILImage(),
     # CenterCrop(256),
     # Scale(136),
-    ResizePad((300, 300)),
+    ResizePad((304, 304)),
     ToTensor(),
     Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -25,7 +27,7 @@ input_transform = Compose([
 
 target_transform = Compose([
     ToNumpy(),
-    ResizePad((300, 300)),
+    ResizePad((304, 304)),
     ToTensor()
 ])
 
@@ -36,3 +38,9 @@ refer = ReferDataset(data_root='/mnt/referit_data',
 
 loader = DataLoader(refer, batch_size=10, shuffle=True)
 
+imgs, masks, words = next(iter(loader))
+x = Variable(imgs, requires_grad=False, volatile=True)
+x = x.cuda()
+
+net = PSPNet(n_classes=1, backend='densenet', psp_size=1024)
+net.cuda()
