@@ -21,7 +21,7 @@ class ResizePad:
         self.h, self.w = size
 
     def __call__(self, img):
-        h, w, c = img.shape
+        h, w = img.shape[:2]
         scale = min(self.h / h, self.w / w)
         resized_h = int(np.round(h * scale))
         resized_w = int(np.round(w * scale))
@@ -30,7 +30,8 @@ class ResizePad:
 
         resized_img = cv2.resize(img, (resized_w, resized_h))
         if img.ndim > 2:
-            new_img = np.zeros((self.h, self.w, c), dtype=resized_img.dtype)
+            new_img = np.zeros(
+                (self.h, self.w, img.shape[-1]), dtype=resized_img.dtype)
         else:
             new_img = np.zeros((self.h, self.w), dtype=resized_img.dtype)
         new_img[pad_h: pad_h + resized_h,
