@@ -15,7 +15,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-import base as extractors
+import psp.base as extractors
 
 
 class PSPModule(nn.Module):
