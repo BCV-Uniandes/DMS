@@ -33,7 +33,8 @@ class ResizePad:
             new_img = np.zeros(
                 (self.h, self.w, img.shape[-1]), dtype=resized_img.dtype)
         else:
-            new_img = np.zeros((self.h, self.w), dtype=resized_img.dtype)
+            resized_img = np.expand_dims(resized_img, -1)
+            new_img = np.zeros((self.h, self.w, 1), dtype=resized_img.dtype)
         new_img[pad_h: pad_h + resized_h,
                 pad_w: pad_w + resized_w, ...] = resized_img
         return new_img
