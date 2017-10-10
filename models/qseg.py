@@ -21,7 +21,7 @@ class QSegNet(nn.Module):
                           out_features=out_features)
         self.vlstm = VILSTM(
             VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-            batch_first=batch_first, visual_size=vis_size)
+            batch_first=batch_first, visual_size=vis_size, mix_size=mix_size)
 
         self.emb = nn.Embedding(dict_size, in_size)
 
