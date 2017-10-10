@@ -85,8 +85,8 @@ class PSPNet(nn.Module):
     def forward(self, x):
         # class_f has 1024 channels and is 8x downsampled
         f, class_f = self.feats(x)
-        psp_out = self.psp(f)
-        p = self.drop_1(psp_out)
+        p = self.psp(f)
+        p = self.drop_1(p)
 
         p = self.up_1(p)
         p = self.drop_2(p)
@@ -100,4 +100,4 @@ class PSPNet(nn.Module):
         # auxiliary = F.adaptive_max_pool2d(
         #     input=class_f, output_size=(1, 1)).view(-1, class_f.size(1))
 
-        return psp_out, self.final(p)  # , self.classifier(auxiliary)
+        return p, self.final(p)  # , self.classifier(auxiliary)
