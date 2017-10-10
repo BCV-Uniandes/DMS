@@ -6,8 +6,8 @@ Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 
 import torch.nn as nn
 
-from vilstm import VILSTM, VILSTMCell
-from psp.pspnet import PSPNet, PSPUpsample
+from .vilstm import VILSTM, VILSTMCell
+from .psp.pspnet import PSPNet, PSPUpsample
 
 
 class QSegNet(nn.Module):
