@@ -42,7 +42,8 @@ refer = ReferDataset(data_root='/mnt/referit_data',
 loader = DataLoader(refer, batch_size=10, shuffle=True)
 
 imgs, masks, words = next(iter(loader))
-net = QSegNet(500, (1024 / 64) * 304 * 304, (1024 / 64) * 304 * 304,
+hid_size = int((1024 / 64) * 304 * 304)
+net = QSegNet(500, hid_size, hid_size,
               dict_size=len(refer.corpus))
 net.cuda()
 x = Variable(imgs)
