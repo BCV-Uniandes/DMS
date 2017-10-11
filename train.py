@@ -20,7 +20,7 @@ input_transform = Compose([
     # ToPILImage(),
     # CenterCrop(256),
     # Scale(136),
-    ResizePad((304, 304)),
+    ResizePad((256, 256)),
     ToTensor(),
     Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -29,7 +29,7 @@ input_transform = Compose([
 
 target_transform = Compose([
     ToNumpy(),
-    ResizePad((304, 304)),
+    ResizePad((256, 256)),
     ToTensor()
 ])
 
@@ -42,10 +42,10 @@ refer = ReferDataset(data_root='/mnt/referit_data',
 loader = DataLoader(refer, batch_size=10, shuffle=True)
 
 imgs, masks, words = next(iter(loader))
-vis_size = int((1024 / 64) * 304 * 304)
-mix_size = int((304 / 8)**2)
-net = QSegNet(500, 200, vis_size, mix_size,
-              dict_size=len(refer.corpus), out_features=512)
+vis_size = int((256 / 64) * 256 * 256)
+mix_size = int((256 / 8)**2)
+net = QSegNet(500, vis_size, 200, mix_size,
+              dict_size=len(refer.corpus), out_features=256)
 net.cuda()
 x = Variable(imgs)
 x = x.cuda()
