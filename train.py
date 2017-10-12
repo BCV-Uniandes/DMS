@@ -20,7 +20,7 @@ input_transform = Compose([
     # ToPILImage(),
     # CenterCrop(256),
     # Scale(136),
-    ResizePad((256, 256)),
+    ResizePad((320, 320)),
     ToTensor(),
     Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -29,7 +29,7 @@ input_transform = Compose([
 
 target_transform = Compose([
     ToNumpy(),
-    ResizePad((256, 256)),
+    ResizePad((320, 320)),
     ToTensor()
 ])
 
@@ -37,7 +37,7 @@ refer = ReferDataset(data_root='/mnt/referit_data',
                      dataset='referit',
                      transform=input_transform,
                      annotation_transform=target_transform,
-                     max_query_len=304)
+                     max_query_len=20)
 
 loader = DataLoader(refer, batch_size=10, shuffle=True)
 

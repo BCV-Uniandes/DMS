@@ -32,6 +32,7 @@ class VILSTMCell(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.use_bias = use_bias
+
         self.weight_a = nn.Parameter(
             torch.FloatTensor(mix_size, visual_size))
         self.weight_he = nn.Parameter(
