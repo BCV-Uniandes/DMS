@@ -14,26 +14,26 @@ from .psp.pspnet import PSPNet, PSPUpsample
 class LangConv(nn.Module):
     def __init__(self, out_size):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2,
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=7, stride=2,
                                padding=3, bias=False)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=7, stride=2,
-                               padding=3, bias=False)
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=7, stride=1, padding=3,
-                               bias=False)
-        self.conv4 = nn.Conv2d(256, 512, kernel_size=7, stride=1, padding=3,
-                               bias=False)
-        self.conv5 = nn.Conv2d(512, 1024, kernel_size=7, stride=1, padding=1,
-                               bias=False)
         self.pool = nn.AdaptiveMaxPool2d(output_size=(out_size, out_size))
+        # self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2,
+        #                        padding=3, bias=False)
+        # self.conv3 = nn.Conv2d(128, 256, kernel_size=7, stride=1, padding=3,
+        #                        bias=False)
+        # self.conv4 = nn.Conv2d(256, 512, kernel_size=7, stride=1, padding=3,
+        #                        bias=False)
+        # self.conv5 = nn.Conv2d(512, 1024, kernel_size=7, stride=1, padding=1,
+        #                        bias=False)
 
     def forward(self, x):
         size = x.size()
         x = x.view(x.size(0) * x.size(1), x.size(2), x.size(3), x.size(4))
         x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
+        # x = self.conv2(x)
+        # x = self.conv3(x)
+        # x = self.conv4(x)
+        # x = self.conv5(x)
         x = self.pool(x)
         x = x.view(size)
         return x
