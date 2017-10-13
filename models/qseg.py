@@ -11,8 +11,27 @@ from .vilstm import VILSTM, VILSTMCell
 from .psp.pspnet import PSPNet, PSPUpsample
 
 
+class LangConv(nn.Module):
+    def __init__(self, out_size):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 256, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(512, 1024, kernel_size=3, stride=2)
+        self.pool = nn.AdaptiveAvgPool2d(output_size=(out_size, out_size))
+
+    def forward(self, x):
+        size = x.size()
+        x = x.view(x.size(0) * x.size(1), x.size(2), x.size(3), x.size(4))
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.pool(x)
+        x = x.view(size)
+        return x
+
+
 class QSegNet(nn.Module):
-    def __init__(self, in_size, vis_size, hid_size, dropout=0.2,
+    def __init__(self, in_size, hid_size, dropout=0.2,
                  num_vlstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
                  out_features=512, num_lstm_layers=2):
@@ -23,44 +42,50 @@ class QSegNet(nn.Module):
         self.emb = nn.Embedding(dict_size, in_size)
         self.lstm = nn.LSTM(in_size, hid_size, dropout=dropout,
                             batch_first=batch_first)
+        self.lang_conv = LangConv(out_features)
 
-        # self.vlstm = VILSTM(
-        #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-        #     batch_first=batch_first, visual_size=vis_size)
+        self.vlstm = VILSTM(
+            VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
+            batch_first=batch_first)
 
-        # self.up_1 = PSPUpsample(out_features, 256)
-        # self.up_2 = PSPUpsample(256, 64)
-        # self.up_3 = PSPUpsample(64, 64)
+        self.up_1 = PSPUpsample(out_features, 256)
+        self.up_2 = PSPUpsample(256, 64)
+        self.up_3 = PSPUpsample(64, 64)
 
-        # self.drop_2 = nn.Dropout2d(p=0.15)
-        # self.final = nn.Sequential(
-        #     nn.Conv2d(64, 1, kernel_size=1),
-        #     nn.LogSoftmax()
-        # )
+        self.drop_2 = nn.Dropout2d(p=0.15)
+        self.final = nn.Sequential(
+            nn.Conv2d(64, 1, kernel_size=1),
+            nn.LogSoftmax()
+        )
 
     def forward(self, imgs, words):
         psp_features = self.psp(imgs)
-        features = psp_features.view(psp_features.size(0), -1)
 
         word_emb = self.emb(words)
         out, _ = self.lstm(word_emb)
 
-        # x is of size BxLxHxH
+        # x_x is of size BxLxHxH
         # B: Batch Size
         # L: Phrase length
         # H: Hidden Size
-        x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
+        x_x = torch.matmul(word_emb.unsqueeze(-1), word_emb.unsqueeze(2))
+        h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
+        h_x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
 
-        # (_, h) = self.vlstm(word_emb, features)
-        # mask_map = h.view(psp_features.size())
+        lang_input = torch.cat(
+            [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)
+        # l_t: BxLx1024xHxH
+        l_t = self.lang_conv(lang_input)
+        # mask: Bx1024xHxH
+        _, (mask, c) = self.vlstm(l_t, psp_features)
 
-        # p = self.up_1(mask_map)
-        # p = self.drop_2(p)
+        p = self.up_1(mask)
+        p = self.drop_2(p)
 
-        # p = self.up_2(p)
-        # p = self.drop_2(p)
+        p = self.up_2(p)
+        p = self.drop_2(p)
 
-        # p = self.up_3(p)
-        # p = self.drop_2(p)
+        p = self.up_3(p)
+        p = self.drop_2(p)
 
         return self.final(p)

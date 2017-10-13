@@ -22,8 +22,7 @@ class VILSTMCell(nn.Module):
 
     """A basic Visual Attention LSTM cell."""
 
-    def __init__(self, input_size, hidden_size, visual_size,
-                 mix_size, use_bias=True):
+    def __init__(self, input_size, hidden_size, use_bias=True):
         """
         Most parts are copied from torch.nn.LSTMCell.
         """
