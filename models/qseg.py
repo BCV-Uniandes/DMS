@@ -31,7 +31,7 @@ class LangConv(nn.Module):
 
 
 class QSegNet(nn.Module):
-    def __init__(self, in_size, hid_size, dropout=0.2,
+    def __init__(self, in_size, hid_size, vis_size, dropout=0.2,
                  num_vlstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
                  out_features=512, num_lstm_layers=2):
@@ -42,7 +42,7 @@ class QSegNet(nn.Module):
         self.emb = nn.Embedding(dict_size, in_size)
         self.lstm = nn.LSTM(in_size, hid_size, dropout=dropout,
                             batch_first=batch_first)
-        self.lang_conv = LangConv(out_features)
+        self.lang_conv = LangConv(vis_size)
 
         # self.vlstm = VILSTM(
         #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
