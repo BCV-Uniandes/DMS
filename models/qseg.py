@@ -44,9 +44,9 @@ class QSegNet(nn.Module):
                             batch_first=batch_first)
         self.lang_conv = LangConv(out_features)
 
-        self.vlstm = VILSTM(
-            VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-            batch_first=batch_first)
+        # self.vlstm = VILSTM(
+        #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
+        #     batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
