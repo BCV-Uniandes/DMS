@@ -14,7 +14,7 @@ from .psp.pspnet import PSPNet, PSPUpsample
 class LangConv(nn.Module):
     def __init__(self, out_size):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 256, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(3, 256, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(512, 1024, kernel_size=3, stride=2)
         self.pool = nn.AdaptiveAvgPool2d(output_size=(out_size, out_size))
@@ -44,9 +44,9 @@ class QSegNet(nn.Module):
                             batch_first=batch_first)
         self.lang_conv = LangConv(out_features)
 
-        self.vlstm = VILSTM(
-            VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-            batch_first=batch_first)
+        # self.vlstm = VILSTM(
+        #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
+        #     batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
@@ -77,15 +77,16 @@ class QSegNet(nn.Module):
         # l_t: BxLx1024xHxH
         l_t = self.lang_conv(lang_input)
         # mask: Bx1024xHxH
-        _, (mask, c) = self.vlstm(l_t, psp_features)
+        # _, (mask, c) = self.vlstm(l_t, psp_features)
 
-        p = self.up_1(mask)
-        p = self.drop_2(p)
+        # p = self.up_1(mask)
+        # p = self.drop_2(p)
 
-        p = self.up_2(p)
-        p = self.drop_2(p)
+        # p = self.up_2(p)
+        # p = self.drop_2(p)
 
-        p = self.up_3(p)
-        p = self.drop_2(p)
+        # p = self.up_3(p)
+        # p = self.drop_2(p)
 
-        return self.final(p)
+        # return self.final(p)
+        return psp_features, l_t
