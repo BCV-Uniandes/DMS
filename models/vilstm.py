@@ -166,6 +166,7 @@ class ViLSTM(nn.Module):
         max_time = input_.size(0)
         output = []
         for time in range(max_time):
+            print(time)
             # if isinstance(cell, BNLSTMCell):
             #     h_next, c_next = cell(input_=input_[time], hx=hx, time=time)
             # else:
