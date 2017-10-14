@@ -111,6 +111,9 @@ class ConvViLSTMCell(nn.Module):
         a = self.a_conv(torch.tanh(e))
         a = F.softmax(a)
         v = a * features
+        print(v.size())
+        print(input_.size())
+        print(v.size())
         # concatenate along channel axis
         combined = torch.cat([input_, h_cur, v], dim=1)
         combined_conv = self.conv(combined)
