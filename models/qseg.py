@@ -66,14 +66,18 @@ class QSegNet(nn.Module):
         # mask: Bx1024xHxH
         _, (mask, _) = self.vilstm(out, imgs)
 
-        # p = self.up_1(mask)
-        # p = self.drop_2(p)
+        if len(mask.size()) == 5:
+            mask = mask.view(mask.size(0) * mask.size(1),
+                             mask.size(2), mask.size(3),
+                             mask.size(4))
+        p = self.up_1(mask)
+        p = self.drop_2(p)
 
-        # p = self.up_2(p)
-        # p = self.drop_2(p)
+        p = self.up_2(p)
+        p = self.drop_2(p)
 
-        # p = self.up_3(p)
-        # p = self.drop_2(p)
+        p = self.up_3(p)
+        p = self.drop_2(p)
 
-        # return self.final(p)
-        return mask
+        return self.final(p)
+        # return mask
