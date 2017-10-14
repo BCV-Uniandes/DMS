@@ -26,11 +26,11 @@ class QSegNet(nn.Module):
                             num_layers=num_lstm_layers)
 
         h, w = image_size
-        self.vlstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 3, out_features,
-                            vis_dim=out_features,
-                            kernel_size=(3, 3),
-                            num_layers=num_vlstm_layers,
-                            batch_first=batch_first)
+        self.vilstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 3, out_features,
+                             vis_dim=out_features,
+                             kernel_size=(3, 3),
+                             num_layers=num_vlstm_layers,
+                             batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
@@ -61,7 +61,7 @@ class QSegNet(nn.Module):
         # l_t: BxLx1024xHxH
         # l_t = self.lang_conv(lang_input)
         # mask: Bx1024xHxH
-        # _, (mask, c) = self.vlstm(l_t, psp_features)
+        _, (mask, c) = self.vilstm(lang_input, psp_features)
 
         # p = self.up_1(mask)
         # p = self.drop_2(p)
