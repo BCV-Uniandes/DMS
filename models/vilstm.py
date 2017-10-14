@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Implementation of Visual Attention LSTM (VILSTM)
+Implementation of Visual Attention LSTM (ViLSTM)
 
 Yuke Zhu, Oliver Groth, Michael S. Bernstein, Li Fei-Fei:
 Visual7W: Grounded Question Answering in Images. CoRR abs/1511.03416 (2015)
@@ -18,16 +18,124 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
-class VILSTMCell(nn.Module):
+class LangConv(nn.Module):
+    def __init__(self, out_size):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=7, stride=2,
+                               padding=3, bias=False)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=7, stride=2,
+                               padding=3, bias=False)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.conv4 = nn.Conv2d(128, 256, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.pool = nn.AdaptiveMaxPool2d(output_size=(out_size, out_size))
+        # self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2,
+        #                        padding=3, bias=False)
+        # self.conv3 = nn.Conv2d(128, 256, kernel_size=7, stride=1, padding=3,
+        #                        bias=False)
+        # self.conv4 = nn.Conv2d(256, 512, kernel_size=7, stride=1, padding=3,
+        #                        bias=False)
+        # self.conv5 = nn.Conv2d(512, 1024, kernel_size=7, stride=1, padding=1,
+        #                        bias=False)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        # x = self.conv5(x)
+        x = self.pool(x)
+        return x
+
+
+class ConvViLSTMCell(nn.Module):
+
+    def __init__(self, input_size, input_dim, hidden_dim, vis_dim,
+                 kernel_size, bias):
+        """
+        Initialize ConvLSTM cell.
+
+        Parameters
+        ----------
+        input_size: (int, int)
+            Height and width of input tensor as (height, width).
+        input_dim: int
+            Number of channels of input tensor.
+        hidden_dim: int
+            Number of channels of hidden state.
+        vis_dim: int
+            Number of channels of visual tensor.
+        kernel_size: (int, int)
+            Size of the convolutional kernel.
+        bias: bool
+            Whether or not to add the bias.
+        """
+
+        super(ConvViLSTMCell, self).__init__()
+
+        self.height, self.width = input_size
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+
+        self.kernel_size = kernel_size
+        self.padding = kernel_size[0] // 2, kernel_size[1] // 2
+        self.bias = bias
+
+        self.lang_conv = LangConv(input_size)
+        self.e_conv = nn.Conv2d(in_channels=self.vis_dim + self.hidden_dim,
+                                out_channels=self.hidden_dim,
+                                kernel_size=self.kernel_size,
+                                padding=self.padding,
+                                bias=False)
+        self.a_conv = nn.Conv2d(in_channels=self.hidden_dim,
+                                out_channels=self.hidden_dim,
+                                kernel_size=self.kernel_size,
+                                padding=self.padding,
+                                bias=self.bias)
+        self.conv = nn.Conv2d(in_channels=self.input_dim + 2 * self.hidden_dim,
+                              out_channels=4 * self.hidden_dim,
+                              kernel_size=self.kernel_size,
+                              padding=self.padding,
+                              bias=self.bias)
+
+    def forward(self, _input, features, h_x):
+        h_cur, c_cur = h_x
+
+        _input = self.lang_conv(_input)
+
+        lang_hid = torch.cat([h_cur, features], dim=1)
+        e = self.e_conv(lang_hid)
+        a = self.a_conv(torch.tanh(e))
+        a = F.softmax(a)
+        v = a * features
+        # concatenate along channel axis
+        combined = torch.cat([_input, h_cur, v], dim=1)
+        combined_conv = self.conv(combined)
+        cc_i, cc_f, cc_o, cc_g = torch.split(
+            combined_conv, self.hidden_dim, dim=1)
+        i = torch.sigmoid(cc_i)
+        f = torch.sigmoid(cc_f)
+        o = torch.sigmoid(cc_o)
+        g = torch.tanh(cc_g)
+
+        c_next = f * c_cur + i * g
+        h_next = o * torch.tanh(c_next)
+
+        return h_next, c_next
+
+
+class ViLSTMCell(nn.Module):
 
     """A basic Visual Attention LSTM cell."""
 
-    def __init__(self, input_size, hidden_size, use_bias=True):
+    def __init__(self, input_size, hidden_size, visual_size,
+                 mix_size, use_bias=True):
         """
         Most parts are copied from torch.nn.LSTMCell.
         """
 
-        super(VILSTMCell, self).__init__()
+        super(ViLSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.use_bias = use_bias
@@ -97,13 +205,13 @@ class VILSTMCell(nn.Module):
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
-class VILSTM(nn.Module):
+class ViLSTM(nn.Module):
 
-    """A module that runs multiple steps of VILSTM."""
+    """A module that runs multiple steps of ViLSTM."""
 
     def __init__(self, cell_class, input_size, hidden_size, num_layers=1,
                  use_bias=True, batch_first=False, dropout=0, **kwargs):
-        super(VILSTM, self).__init__()
+        super(ViLSTM, self).__init__()
         self.cell_class = cell_class
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -166,7 +274,7 @@ class VILSTM(nn.Module):
         layer_output = None
         for layer in range(self.num_layers):
             cell = self.get_cell(layer)
-            layer_output, (layer_h_n, layer_c_n) = VILSTM._forward_rnn(
+            layer_output, (layer_h_n, layer_c_n) = ViLSTM._forward_rnn(
                 cell=cell, input_=input_, features=features,
                 length=length, hx=hx)
             input_ = self.dropout_layer(layer_output)

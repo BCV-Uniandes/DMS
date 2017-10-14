@@ -7,36 +7,8 @@ Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 import torch
 import torch.nn as nn
 
-from .vilstm import VILSTM, VILSTMCell
 from .psp.pspnet import PSPNet, PSPUpsample
-
-
-class LangConv(nn.Module):
-    def __init__(self, out_size):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=7, stride=2,
-                               padding=3, bias=False)
-        self.pool = nn.AdaptiveMaxPool2d(output_size=(out_size, out_size))
-        # self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2,
-        #                        padding=3, bias=False)
-        # self.conv3 = nn.Conv2d(128, 256, kernel_size=7, stride=1, padding=3,
-        #                        bias=False)
-        # self.conv4 = nn.Conv2d(256, 512, kernel_size=7, stride=1, padding=3,
-        #                        bias=False)
-        # self.conv5 = nn.Conv2d(512, 1024, kernel_size=7, stride=1, padding=1,
-        #                        bias=False)
-
-    def forward(self, x):
-        size = x.size()
-        x = x.view(x.size(0) * x.size(1), x.size(2), x.size(3), x.size(4))
-        x = self.conv1(x)
-        # x = self.conv2(x)
-        # x = self.conv3(x)
-        # x = self.conv4(x)
-        # x = self.conv5(x)
-        x = self.pool(x)
-        x = x.view(size)
-        return x
+from .vilstm import ViLSTM, ViLSTMCell, ConvViLSTMCell
 
 
 class QSegNet(nn.Module):
@@ -51,7 +23,6 @@ class QSegNet(nn.Module):
         self.emb = nn.Embedding(dict_size, in_size)
         self.lstm = nn.LSTM(in_size, hid_size, dropout=dropout,
                             batch_first=batch_first)
-        self.lang_conv = LangConv(vis_size)
 
         # self.vlstm = VILSTM(
         #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
@@ -84,7 +55,7 @@ class QSegNet(nn.Module):
         lang_input = torch.cat(
             [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)
         # l_t: BxLx1024xHxH
-        l_t = self.lang_conv(lang_input)
+        # l_t = self.lang_conv(lang_input)
         # mask: Bx1024xHxH
         # _, (mask, c) = self.vlstm(l_t, psp_features)
 
