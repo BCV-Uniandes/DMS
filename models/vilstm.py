@@ -84,7 +84,7 @@ class ConvViLSTMCell(nn.Module):
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias = bias
 
-        self.lang_conv = LangConv(input_size)
+        # self.lang_conv = LangConv(input_size)
         self.e_conv = nn.Conv2d(in_channels=self.vis_dim + self.hidden_dim,
                                 out_channels=self.hidden_dim,
                                 kernel_size=self.kernel_size,
@@ -101,10 +101,10 @@ class ConvViLSTMCell(nn.Module):
                               padding=self.padding,
                               bias=self.bias)
 
-    def forward(self, _input, features, h_x):
+    def forward(self, input_, features, h_x):
         h_cur, c_cur = h_x
 
-        _input = self.lang_conv(_input)
+        _input = self.lang_conv(input_)
 
         lang_hid = torch.cat([h_cur, features], dim=1)
         e = self.e_conv(lang_hid)
