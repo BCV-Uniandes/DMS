@@ -50,11 +50,12 @@ class LangConv(nn.Module):
 
 
 class ConvViLSTMCell(nn.Module):
+    """Basic Convolutional Visual Attention LSTM cell."""
 
     def __init__(self, input_size, input_dim, hidden_dim, vis_dim,
                  kernel_size, bias):
         """
-        Initialize ConvLSTM cell.
+        Initialize ConvViLSTM cell.
 
         Parameters
         ----------
@@ -209,25 +210,29 @@ class ViLSTM(nn.Module):
 
     """A module that runs multiple steps of ViLSTM."""
 
-    def __init__(self, cell_class, input_size, hidden_size, num_layers=1,
-                 use_bias=True, batch_first=False, dropout=0, **kwargs):
+    def __init__(self, cell_class, input_size, input_dim, hidden_dim,
+                 num_layers=1, use_bias=True, batch_first=False,
+                 dropout=0, **kwargs):
         super(ViLSTM, self).__init__()
+        self.input_size = input_size
         self.cell_class = cell_class
         self.input_size = input_size
-        self.hidden_size = hidden_size
+        self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.use_bias = use_bias
         self.batch_first = batch_first
         self.dropout = dropout
 
         for layer in range(num_layers):
-            layer_input_size = input_size if layer == 0 else hidden_size
-            cell = cell_class(input_size=layer_input_size,
-                              hidden_size=hidden_size,
+            layer_input_size = input_size if layer == 0 else hidden_dim
+            cell = cell_class(input_size=self.input_size,
+                              input_dim=layer_input_size,
+                              hidden_dim=hidden_dim,
+                              bias=self.use_bias,
                               **kwargs)
             setattr(self, 'cell_{}'.format(layer), cell)
         self.dropout_layer = nn.Dropout(dropout)
-        self.reset_parameters()
+        # self.reset_parameters()
 
     def get_cell(self, layer):
         return getattr(self, 'cell_{}'.format(layer))
@@ -259,7 +264,7 @@ class ViLSTM(nn.Module):
     def forward(self, input_, features, length=None, hx=None):
         if self.batch_first:
             input_ = input_.transpose(0, 1)
-        max_time, batch_size, _ = input_.size()
+        max_time, batch_size = input_.size()[:2]
         if length is None:
             length = Variable(torch.LongTensor([max_time] * batch_size))
             if input_.is_cuda:
@@ -267,7 +272,7 @@ class ViLSTM(nn.Module):
                 length = length.cuda(device)
         if hx is None:
             hx = Variable(input_.data.new(
-                batch_size, self.hidden_size).zero_())
+                batch_size, self.hidden_dim, *self.input_size).zero_())
             hx = (hx, hx)
         h_n = []
         c_n = []
