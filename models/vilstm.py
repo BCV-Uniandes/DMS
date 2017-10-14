@@ -101,10 +101,10 @@ class ConvViLSTMCell(nn.Module):
                               padding=self.padding,
                               bias=self.bias)
 
-    def forward(self, input_, features, h_x):
-        h_cur, c_cur = h_x
+    def forward(self, input_, features, hx):
+        h_cur, c_cur = hx
 
-        _input = self.lang_conv(input_)
+        # _input = self.lang_conv(input_)
 
         lang_hid = torch.cat([h_cur, features], dim=1)
         e = self.e_conv(lang_hid)
@@ -112,7 +112,7 @@ class ConvViLSTMCell(nn.Module):
         a = F.softmax(a)
         v = a * features
         # concatenate along channel axis
-        combined = torch.cat([_input, h_cur, v], dim=1)
+        combined = torch.cat([input_, h_cur, v], dim=1)
         combined_conv = self.conv(combined)
         cc_i, cc_f, cc_o, cc_g = torch.split(
             combined_conv, self.hidden_dim, dim=1)
@@ -125,86 +125,6 @@ class ConvViLSTMCell(nn.Module):
         h_next = o * torch.tanh(c_next)
 
         return h_next, c_next
-
-
-class ViLSTMCell(nn.Module):
-
-    """A basic Visual Attention LSTM cell."""
-
-    def __init__(self, input_size, hidden_size, visual_size,
-                 mix_size, use_bias=True):
-        """
-        Most parts are copied from torch.nn.LSTMCell.
-        """
-
-        super(ViLSTMCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.use_bias = use_bias
-
-        self.weight_a = nn.Parameter(
-            torch.FloatTensor(mix_size, visual_size))
-        self.weight_he = nn.Parameter(
-            torch.FloatTensor(hidden_size, mix_size))
-        self.weight_ce = nn.Parameter(
-            torch.FloatTensor(visual_size, mix_size))
-        self.weight_ih = nn.Parameter(
-            torch.FloatTensor(input_size, 4 * hidden_size))
-        self.weight_hh = nn.Parameter(
-            torch.FloatTensor(hidden_size, 4 * hidden_size))
-        self.weight_vh = nn.Parameter(
-            torch.FloatTensor(visual_size, 4 * hidden_size))
-        if use_bias:
-            self.bias = nn.Parameter(torch.FloatTensor(4 * hidden_size))
-            self.comp_bias = nn.Parameter(torch.FloatTensor(mix_size))
-        else:
-            self.register_parameter('bias', None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
-
-    def forward(self, input_, features, hx):
-        """
-        Args:
-            input_: A (batch, input_size) tensor containing input
-                features.
-            features: A (batch, visual_size) tensor containing convolutional
-                features.
-            hx: A tuple (h_0, c_0), which contains the initial hidden
-                and cell state, where the size of both states is
-                (batch, hidden_size).
-
-        Returns:
-            h_1, c_1: Tensors containing the next hidden and cell state.
-        """
-
-        h_0, c_0 = hx
-        batch_size = h_0.size(0)
-        bias_batch = (self.bias.unsqueeze(0)
-                      .expand(batch_size, *self.bias.size()))
-        wh_b = torch.addmm(bias_batch, h_0, self.weight_hh)
-        wi = torch.mm(input_, self.weight_ih)
-
-        h_e = torch.mm(h_0, self.weight_he)
-        c_e = torch.mm(features, self.weight_ce)
-        e_i = torch.add(torch.tanh(h_e + c_e), self.comp_bias)
-        e = torch.mm(e_i, self.weight_a)
-        a = F.softmax(e)
-        v_0 = features * a
-
-        wv = torch.mm(v_0, self.weight_vh)
-        f, i, o, g = torch.split(wh_b + wi + wv,
-                                 split_size=self.hidden_size, dim=1)
-        c_1 = torch.sigmoid(f) * c_0 + torch.sigmoid(i) * torch.tanh(g)
-        h_1 = torch.sigmoid(o) * torch.tanh(c_1)
-        return h_1, c_1
-
-    def __repr__(self):
-        s = '{name}({input_size}, {hidden_size})'
-        return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
 class ViLSTM(nn.Module):
@@ -251,8 +171,7 @@ class ViLSTM(nn.Module):
             # if isinstance(cell, BNLSTMCell):
             #     h_next, c_next = cell(input_=input_[time], hx=hx, time=time)
             # else:
-            h_next, c_next = cell(
-                input_=input_[time], features=features, hx=hx)
+            h_next, c_next = cell(input_[time], features, hx)
             mask = (time < length).float().unsqueeze(1).expand_as(h_next)
             h_next = h_next * mask + hx[0] * (1 - mask)
             c_next = c_next * mask + hx[1] * (1 - mask)
