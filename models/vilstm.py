@@ -174,7 +174,10 @@ class ViLSTM(nn.Module):
             #     h_next, c_next = cell(input_=input_[time], hx=hx, time=time)
             # else:
             h_next, c_next = cell(input_[time], features, hx)
-            mask = (time < length).float().unsqueeze(1).expand_as(h_next)
+            mask = (time < length).float()
+            print(mask.size())
+            print(h_next.size())
+            mask = mask.unsqueeze(1).expand_as(h_next)
             h_next = h_next * mask + hx[0] * (1 - mask)
             c_next = c_next * mask + hx[1] * (1 - mask)
             hx_next = (h_next, c_next)
