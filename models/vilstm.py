@@ -11,7 +11,6 @@ Based on:
 https://github.com/jihunchoi/recurrent-batch-normalization-pytorch/blob/master/bnlstm.py
 """
 
-import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -106,24 +105,24 @@ class ConvViLSTMCell(nn.Module):
 
         input_ = input_.squeeze().unsqueeze(1)
         lang_hid = torch.cat([h_cur, features], dim=1)
-        e = self.e_conv(lang_hid)
-        a = self.a_conv(torch.tanh(e))
-        a = F.softmax(a)
-        v = a * features
+        v = self.e_conv(lang_hid)
+        v = self.a_conv(torch.tanh(v))
+        v = F.softmax(v)
+        v = v * features
         # concatenate along channel axis
         combined = torch.cat([input_, h_cur, v], dim=1)
-        combined_conv = self.conv(combined)
-        cc_i, cc_f, cc_o, cc_g = torch.split(
-            combined_conv, self.hidden_dim, dim=1)
-        i = torch.sigmoid(cc_i)
-        f = torch.sigmoid(cc_f)
-        o = torch.sigmoid(cc_o)
-        g = torch.tanh(cc_g)
+        combined = self.conv(combined)
+        i, f, o, g = torch.split(
+            combined, self.hidden_dim, dim=1)
+        i = torch.sigmoid(i)
+        f = torch.sigmoid(f)
+        o = torch.sigmoid(o)
+        g = torch.tanh(g)
 
-        c_next = f * c_cur + i * g
-        h_next = o * torch.tanh(c_next)
+        c_cur = f * c_cur + i * g
+        h_cur = o * torch.tanh(c_cur)
 
-        return h_next, c_next
+        return h_cur, c_cur
 
 
 class ViLSTM(nn.Module):
@@ -176,9 +175,8 @@ class ViLSTM(nn.Module):
             mask = mask.expand_as(h_next)
             h_next = h_next * mask + hx[0] * (1 - mask)
             c_next = c_next * mask + hx[1] * (1 - mask)
-            hx_next = (h_next, c_next)
-            output.append(h_next)
-            hx = hx_next
+            hx = (h_next, c_next)
+            output.append(hx)
         output = torch.stack(output, 0)
         return output, hx
 

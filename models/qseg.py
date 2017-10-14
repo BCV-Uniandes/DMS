@@ -29,7 +29,7 @@ class QSegNet(nn.Module):
         self.vilstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 1, out_features,
                              vis_dim=out_features,
                              kernel_size=(3, 3),
-                             num_layers=num_vlstm_layers,
+                             num_layers=1,
                              batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
@@ -43,10 +43,10 @@ class QSegNet(nn.Module):
         )
 
     def forward(self, imgs, words):
-        psp_features = self.psp(imgs)
+        imgs = self.psp(imgs)
 
-        word_emb = self.emb(words)
-        out, _ = self.lstm(word_emb)
+        words = self.emb(words)
+        out, _ = self.lstm(words)
 
         # x_x is of size BxLxHxH
         # B: Batch Size
@@ -56,15 +56,15 @@ class QSegNet(nn.Module):
         # h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
         # h_x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
 
-        lang_input = out.unsqueeze(-1).expand(out.size(0), out.size(1),
-                                              out.size(2), out.size(2))
+        out = out.unsqueeze(-1).expand(out.size(0), out.size(1),
+                                       out.size(2), out.size(2))
         # lang_input = h_h.unsqueeze(2)
         # lang_input = torch.cat(
         # [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)
         # l_t: BxLx1024xHxH
         # l_t = self.lang_conv(lang_input)
         # mask: Bx1024xHxH
-        _, (mask, c) = self.vilstm(lang_input, psp_features)
+        _, (mask, _) = self.vilstm(out, imgs)
 
         # p = self.up_1(mask)
         # p = self.drop_2(p)
@@ -76,4 +76,4 @@ class QSegNet(nn.Module):
         # p = self.drop_2(p)
 
         # return self.final(p)
-        return psp_features, lang_input
+        return mask
