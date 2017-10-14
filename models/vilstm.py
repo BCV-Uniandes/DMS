@@ -164,7 +164,7 @@ class ViLSTM(nn.Module):
     @staticmethod
     def _forward_rnn(cell, input_, features, length, hx):
         max_time = input_.size(0)
-        output = []
+        # output = []
         for time in range(max_time):
             print(time)
             # if isinstance(cell, BNLSTMCell):
@@ -177,9 +177,9 @@ class ViLSTM(nn.Module):
             h_next = h_next * mask + hx[0] * (1 - mask)
             c_next = c_next * mask + hx[1] * (1 - mask)
             hx = (h_next, c_next)
-            output.append(hx)
-        output = torch.stack(output, 0)
-        return output, hx
+            # output.append(hx)
+        # output = torch.stack(output, 0)
+        return h_next.unsqueeze(0), hx
 
     def forward(self, input_, features, length=None, hx=None):
         if self.batch_first:
