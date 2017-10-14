@@ -78,6 +78,7 @@ class ConvViLSTMCell(nn.Module):
         self.height, self.width = input_size
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
+        self.vis_dim = vis_dim
 
         self.kernel_size = kernel_size
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2

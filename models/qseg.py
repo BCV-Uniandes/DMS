@@ -12,10 +12,10 @@ from .psp.pspnet import PSPNet, PSPUpsample
 
 
 class QSegNet(nn.Module):
-    def __init__(self, image_size, emb_size, vis_size, dropout=0.2,
+    def __init__(self, image_size, emb_size, out_features=512, dropout=0.2,
                  num_vlstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
-                 out_features=512, num_lstm_layers=2):
+                 num_lstm_layers=2):
         super().__init__()
         self.psp = PSPNet(n_classes=1, psp_size=psp_size,
                           pretrained=pretrained, backend=backend,
