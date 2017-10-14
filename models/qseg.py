@@ -53,10 +53,12 @@ class QSegNet(nn.Module):
         # L: Phrase length
         # H: Hidden Size
         # x_x = torch.matmul(word_emb.unsqueeze(-1), word_emb.unsqueeze(2))
-        h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
+        # h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
         # h_x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
 
-        lang_input = h_h.unsqueeze(2)
+        lang_input = out.unsqueeze(-1).expand(out.size(0), out.size(1),
+                                              out.size(2), out.size(2))
+        # lang_input = h_h.unsqueeze(2)
         # lang_input = torch.cat(
         # [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)
         # l_t: BxLx1024xHxH
