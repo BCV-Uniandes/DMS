@@ -110,9 +110,6 @@ class ConvViLSTMCell(nn.Module):
         a = self.a_conv(torch.tanh(e))
         a = F.softmax(a)
         v = a * features
-        print(v.size())
-        print(input_.size())
-        print(v.size())
         # concatenate along channel axis
         combined = torch.cat([input_, h_cur, v], dim=1)
         combined_conv = self.conv(combined)
@@ -175,9 +172,8 @@ class ViLSTM(nn.Module):
             # else:
             h_next, c_next = cell(input_[time], features, hx)
             mask = (time < length).float()
-            print(mask.size())
-            print(h_next.size())
-            mask = mask.unsqueeze(1).expand_as(h_next)
+            mask = mask.view(-1, 1, 1, 1)
+            mask = mask.expand_as(h_next)
             h_next = h_next * mask + hx[0] * (1 - mask)
             c_next = c_next * mask + hx[1] * (1 - mask)
             hx_next = (h_next, c_next)
