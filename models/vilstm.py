@@ -104,8 +104,7 @@ class ConvViLSTMCell(nn.Module):
     def forward(self, input_, features, hx):
         h_cur, c_cur = hx
 
-        # _input = self.lang_conv(input_)
-
+        input_ = input_.squeeze().unsqueeze(1)
         lang_hid = torch.cat([h_cur, features], dim=1)
         e = self.e_conv(lang_hid)
         a = self.a_conv(torch.tanh(e))
