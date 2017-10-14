@@ -7,12 +7,12 @@ Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 import torch
 import torch.nn as nn
 
+from .vilstm import ViLSTM, ConvViLSTMCell
 from .psp.pspnet import PSPNet, PSPUpsample
-from .vilstm import ViLSTM, ViLSTMCell, ConvViLSTMCell
 
 
 class QSegNet(nn.Module):
-    def __init__(self, in_size, hid_size, vis_size, dropout=0.2,
+    def __init__(self, image_size, emb_size, vis_size, dropout=0.2,
                  num_vlstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
                  out_features=512, num_lstm_layers=2):
@@ -20,13 +20,17 @@ class QSegNet(nn.Module):
         self.psp = PSPNet(n_classes=1, psp_size=psp_size,
                           pretrained=pretrained, backend=backend,
                           out_features=out_features)
-        self.emb = nn.Embedding(dict_size, in_size)
-        self.lstm = nn.LSTM(in_size, hid_size, dropout=dropout,
-                            batch_first=batch_first)
+        self.emb = nn.Embedding(dict_size, emb_size)
+        self.lstm = nn.LSTM(emb_size, emb_size, dropout=dropout,
+                            batch_first=batch_first,
+                            num_layers=num_lstm_layers)
 
-        # self.vlstm = VILSTM(
-        #     VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-        #     batch_first=batch_first)
+        h, w = image_size
+        self.vlstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 3, out_features,
+                            vis_dim=out_features,
+                            kernel_size=(3, 3),
+                            num_layers=num_vlstm_layers,
+                            batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
@@ -69,4 +73,4 @@ class QSegNet(nn.Module):
         # p = self.drop_2(p)
 
         # return self.final(p)
-        return psp_features, l_t
+        return psp_features, lang_input

@@ -224,7 +224,7 @@ class ViLSTM(nn.Module):
         self.dropout = dropout
 
         for layer in range(num_layers):
-            layer_input_size = input_size if layer == 0 else hidden_dim
+            layer_input_size = input_dim if layer == 0 else hidden_dim
             cell = cell_class(input_size=self.input_size,
                               input_dim=layer_input_size,
                               hidden_dim=hidden_dim,
