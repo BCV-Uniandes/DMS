@@ -13,7 +13,7 @@ from .psp.pspnet import PSPNet, PSPUpsample
 
 class QSegNet(nn.Module):
     def __init__(self, image_size, emb_size, hid_size, out_features=512,
-                 num_vlstm_layers=2, pretrained=True, batch_first=True,
+                 num_vilstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
                  num_lstm_layers=2, dropout=0.2):
         super().__init__()
