@@ -4,26 +4,33 @@
 Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 """
 
+import torch
 import torch.nn as nn
 
-from .vilstm import VILSTM, VILSTMCell
+from .vilstm import ViLSTM, ConvViLSTMCell
 from .psp.pspnet import PSPNet, PSPUpsample
 
 
 class QSegNet(nn.Module):
-    def __init__(self, in_size, vis_size, hid_size, mix_size, dropout=0.2,
-                 num_lstm_layers=2, pretrained=True, batch_first=True,
+    def __init__(self, image_size, emb_size, hid_size, out_features=512,
+                 num_vlstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
-                 out_features=512):
+                 num_lstm_layers=2, dropout=0.2):
         super().__init__()
         self.psp = PSPNet(n_classes=1, psp_size=psp_size,
                           pretrained=pretrained, backend=backend,
                           out_features=out_features)
-        self.vlstm = VILSTM(
-            VILSTMCell, in_size, hid_size, num_layers=num_lstm_layers,
-            batch_first=batch_first, visual_size=vis_size, mix_size=mix_size)
+        self.emb = nn.Embedding(dict_size, emb_size)
+        self.lstm = nn.LSTM(emb_size, hid_size, dropout=dropout,
+                            batch_first=batch_first,
+                            num_layers=num_lstm_layers)
 
-        self.emb = nn.Embedding(dict_size, in_size)
+        h, w = image_size
+        self.vilstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 1, out_features,
+                             vis_dim=out_features,
+                             kernel_size=(3, 3),
+                             num_layers=1,
+                             batch_first=batch_first)
 
         self.up_1 = PSPUpsample(out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
@@ -36,15 +43,34 @@ class QSegNet(nn.Module):
         )
 
     def forward(self, imgs, words):
-        psp_features = self.psp(imgs)
-        features = psp_features.view(psp_features.size(0), -1)
+        imgs = self.psp(imgs)
 
-        word_emb = self.emb(words)
+        words = self.emb(words)
+        out, _ = self.lstm(words)
 
-        (_, h) = self.vlstm(word_emb, features)
-        mask_map = h.view(psp_features.size())
+        # x_x is of size BxLxHxH
+        # B: Batch Size
+        # L: Phrase length
+        # H: Hidden Size
+        # x_x = torch.matmul(word_emb.unsqueeze(-1), word_emb.unsqueeze(2))
+        # h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
+        # h_x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
 
-        p = self.up_1(mask_map)
+        out = out.unsqueeze(-1).expand(out.size(0), out.size(1),
+                                       out.size(2), out.size(2))
+        # lang_input = h_h.unsqueeze(2)
+        # lang_input = torch.cat(
+        # [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)
+        # l_t: BxLx1024xHxH
+        # l_t = self.lang_conv(lang_input)
+        # mask: Bx1024xHxH
+        _, (mask, _) = self.vilstm(out, imgs)
+
+        if len(mask.size()) == 5:
+            mask = mask.view(mask.size(0) * mask.size(1),
+                             mask.size(2), mask.size(3),
+                             mask.size(4))
+        p = self.up_1(mask)
         p = self.drop_2(p)
 
         p = self.up_2(p)
@@ -54,3 +80,4 @@ class QSegNet(nn.Module):
         p = self.drop_2(p)
 
         return self.final(p)
+        # return mask

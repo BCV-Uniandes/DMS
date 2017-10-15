@@ -31,7 +31,7 @@ class VisdomWrapper(Visdom):
 
     def init_line_plot(self, name,
                        X=torch.zeros((1,)).cpu(),
-                       Y=torch.zeros((1, 3)).cpu(), **opts):
+                       Y=torch.zeros((1,)).cpu(), **opts):
         self.plots[name] = self.line(X=X, Y=Y, opts=opts)
 
     def plot_line(self, name, **kwargs):
