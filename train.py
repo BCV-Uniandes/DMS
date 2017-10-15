@@ -186,7 +186,7 @@ def train(epoch):
     total_loss = 0
     epoch_total_loss = 0
     start_time = time.time()
-    for batch_idx, (imgs, masks, words) in train_loader:
+    for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
         masks = Variable(masks)
         words = Variable(words)
@@ -243,7 +243,7 @@ def validate(epoch):
     net.eval()
     epoch_total_loss = 0
     start_time = time.time()
-    for batch_idx, (imgs, masks, words) in val_loader:
+    for batch_idx, (imgs, masks, words) in enumerate(val_loader):
         imgs = Variable(imgs, volatile=True)
         masks = Variable(masks, volatile=True)
         words = Variable(words, volatile=True)
