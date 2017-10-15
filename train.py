@@ -9,12 +9,10 @@ import torch.nn as nn
 from torch.autograd import Variable
 from referit_loader import ReferDataset
 from torch.utils.data import DataLoader
-from torchvision.transforms import (
-    Compose, Scale, CenterCrop, ToPILImage, ToTensor, Normalize)
+from torchvision.transforms import Compose, ToTensor, Normalize
 
-from utils.transforms import ResizePad, ToNumpy
-from models import PSPNet
 from models import QSegNet
+from utils.transforms import ResizePad, ToNumpy
 
 input_transform = Compose([
     # ToPILImage(),
