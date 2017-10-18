@@ -130,16 +130,17 @@ class ReferDataset(data.Dataset):
         bar = progressbar.ProgressBar()
         for name in bar(im_list):
             im_filename = name.split('_', 1)[0] + '.jpg'
-            mask_mat_filename = osp.join(self.mask_dir, name + '.mat')
-            mask_pth_filename = osp.join(self.mask_dir, name + '.pth')
-            if osp.exists(mask_mat_filename):
-                mask = sio.loadmat(mask_mat_filename)['segimg_t'] == 0
-                mask = mask.astype(np.float64)
-                mask = torch.from_numpy(mask)
-                torch.save(mask, mask_pth_filename)
-                os.remove(mask_mat_filename)
-            for query in query_dict[name]:
-                split_dataset.append((im_filename, name + '.pth', query))
+            if osp.exists(osp.join(self.im_dir, im_filename)):
+                mask_mat_filename = osp.join(self.mask_dir, name + '.mat')
+                mask_pth_filename = osp.join(self.mask_dir, name + '.pth')
+                if osp.exists(mask_mat_filename):
+                    mask = sio.loadmat(mask_mat_filename)['segimg_t'] == 0
+                    mask = mask.astype(np.float64)
+                    mask = torch.from_numpy(mask)
+                    torch.save(mask, mask_pth_filename)
+                    os.remove(mask_mat_filename)
+                for query in query_dict[name]:
+                    split_dataset.append((im_filename, name + '.pth', query))
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
@@ -168,17 +169,18 @@ class ReferDataset(data.Dataset):
         for ref in bar(refs):
             img_filename = 'COCO_train2014_{0}.jpg'.format(
                 str(ref['image_id']).zfill(12))
-            h, w, _ = cv2.imread(osp.join(self.im_dir, img_filename)).shape
-            seg = refer.anns[ref['ann_id']]['segmentation']
-            rle = cocomask.frPyObjects(seg, h, w)
-            mask = np.max(cocomask.decode(rle), axis=2).astype(np.float32)
-            mask = torch.from_numpy(mask)
-            mask_file = str(ref['image_id']).zfill(12) + '.pth'
-            mask_filename = osp.join(self.mask_dir, mask_file)
-            if not osp.exists(mask_filename):
-                torch.save(mask, mask_filename)
-            for sentence in ref['sentences']:
-                split_dataset.append((img_filename, mask_file, sentence))
+            if osp.exists(osp.join(self.im_dir, img_filename)):
+                h, w, _ = cv2.imread(osp.join(self.im_dir, img_filename)).shape
+                seg = refer.anns[ref['ann_id']]['segmentation']
+                rle = cocomask.frPyObjects(seg, h, w)
+                mask = np.max(cocomask.decode(rle), axis=2).astype(np.float32)
+                mask = torch.from_numpy(mask)
+                mask_file = str(ref['image_id']).zfill(12) + '.pth'
+                mask_filename = osp.join(self.mask_dir, mask_file)
+                if not osp.exists(mask_filename):
+                    torch.save(mask, mask_filename)
+                for sentence in ref['sentences']:
+                    split_dataset.append((img_filename, mask_file, sentence))
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
