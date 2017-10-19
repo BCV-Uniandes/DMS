@@ -182,7 +182,8 @@ class ReferDataset(data.Dataset):
                 if not osp.exists(mask_filename):
                     torch.save(mask, mask_filename)
                 for sentence in ref['sentences']:
-                    split_dataset.append((img_filename, mask_file, sentence))
+                    split_dataset.append((
+                        img_filename, mask_file, sentence['sent']))
 
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
