@@ -193,6 +193,7 @@ class ViLSTM(nn.Module):
         if hx is None:
             hx = Variable(input_.data.new(
                 batch_size, self.hidden_dim, *self.input_size).zero_())
+            hx = hx.cuda()
             hx = (hx, hx)
         h_n = []
         c_n = []
