@@ -32,7 +32,7 @@ class QSegNet(nn.Module):
                              num_layers=1,
                              batch_first=batch_first)
 
-        self.up_1 = PSPUpsample(out_features, 256)
+        self.up_1 = PSPUpsample(2 * out_features, 256)
         self.up_2 = PSPUpsample(256, 64)
         self.up_3 = PSPUpsample(64, 64)
 
@@ -70,6 +70,7 @@ class QSegNet(nn.Module):
             mask = mask.view(mask.size(0) * mask.size(1),
                              mask.size(2), mask.size(3),
                              mask.size(4))
+        mask = torch.cat([imgs, mask], dim=1)
         p = self.up_1(mask)
         p = self.drop_2(p)
 

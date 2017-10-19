@@ -179,7 +179,7 @@ optimizer = optim.Adam(net.parameters(), lr=args.lr)
 scheduler = MultiStepLR(
     optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
-criterion = nn.BCEWithLogitsLoss()
+criterion = nn.BCELoss()
 
 
 def train(epoch):
