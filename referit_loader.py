@@ -130,6 +130,8 @@ class ReferDataset(data.Dataset):
         bar = progressbar.ProgressBar()
         for name in bar(im_list):
             im_filename = name.split('_', 1)[0] + '.jpg'
+            if im_filename in ['19579.jpg', '17975.jpg', '19575.jpg']:
+                continue
             if osp.exists(osp.join(self.im_dir, im_filename)):
                 mask_mat_filename = osp.join(self.mask_dir, name + '.mat')
                 mask_pth_filename = osp.join(self.mask_dir, name + '.pth')
