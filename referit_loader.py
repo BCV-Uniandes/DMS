@@ -190,7 +190,8 @@ class ReferDataset(data.Dataset):
 
         img_path = osp.join(self.im_dir, img_file)
         img = cv2.imread(img_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if img.shape[-1] > 1:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         mask_path = osp.join(self.mask_dir, mask_file)
         mask = torch.load(mask_path)
