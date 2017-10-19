@@ -192,6 +192,8 @@ class ReferDataset(data.Dataset):
         img = cv2.imread(img_path)
         if img.shape[-1] > 1:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            img = np.stack([img] * 3)
 
         mask_path = osp.join(self.mask_dir, mask_file)
         mask = torch.load(mask_path)
