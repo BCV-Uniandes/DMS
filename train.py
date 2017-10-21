@@ -189,7 +189,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
-        masks = Variable(torch.LongTensor(masks))
+        masks = Variable(masks.long())
         words = Variable(words)
 
         if args.cuda:
