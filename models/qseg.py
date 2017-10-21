@@ -38,8 +38,8 @@ class QSegNet(nn.Module):
 
         self.drop_2 = nn.Dropout2d(p=0.15)
         self.final = nn.Sequential(
-            nn.Conv2d(64, 2, kernel_size=1),
-            nn.LogSoftmax()
+            nn.Conv2d(64, 1, kernel_size=1)
+            # nn.LogSoftmax()
         )
 
     def forward(self, imgs, words):

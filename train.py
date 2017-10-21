@@ -179,7 +179,7 @@ optimizer = optim.Adam(net.parameters(), lr=args.lr)
 scheduler = MultiStepLR(
     optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
-criterion = nn.NLLLoss2d()
+criterion = nn.BCEWithLogitsLoss()
 
 
 def train(epoch):
@@ -189,7 +189,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
-        masks = Variable(masks.long())
+        masks = Variable(masks)
         words = Variable(words)
 
         if args.cuda:
