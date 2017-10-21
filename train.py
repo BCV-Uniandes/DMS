@@ -288,6 +288,7 @@ if __name__ == '__main__':
                       epoch, time.time() - epoch_start_time, train_loss))
             print('-' * 89)
             if best_val_loss is None or val_loss < best_val_loss:
+                best_val_loss = val_loss
                 filename = osp.join(args.save_folder, 'qsegnet_weights.pth')
                 torch.save(net.state_dict(), filename)
     except KeyboardInterrupt:
