@@ -30,13 +30,13 @@ parser = argparse.ArgumentParser(
 # Dataloading-related settings
 parser.add_argument('--data', type=str, default='../referit_data',
                     help='path to ReferIt splits data folder')
-parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
+parser.add_argument('--snapshot', default='weights/qsegnet_unc_snapshot.pth',
                     help='path to weight snapshot file')
 parser.add_argument('--num-workers', default=2, type=int,
                     help='number of workers used in dataloading')
-parser.add_argument('--dataset', default='referit', type=str,
+parser.add_argument('--dataset', default='unc', type=str,
                     help='dataset used to train QSegNet')
-parser.add_argument('--split', default='train', type=str,
+parser.add_argument('--split', default='testA', type=str,
                     help='name of the dataset split used to train')
 
 # Training procedure settings
@@ -44,7 +44,7 @@ parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--batch-size', default=5, type=int,
+parser.add_argument('--batch-size', default=10, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
@@ -130,7 +130,7 @@ def evaluate():
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(loader):
         imgs = Variable(imgs, volatile=True)
-        masks = masks.cpu().numpy()
+        masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
 
         if args.cuda:
