@@ -138,7 +138,7 @@ def evaluate():
             words = words.cuda()
 
         out = net(imgs, words)
-        out = out.cpu().numpy()
+        out = out.data.cpu().numpy()
 
         batch_iou = iou(out, masks)
         total_iou += np.sum(batch_iou)
