@@ -106,7 +106,6 @@ net = QSegNet(image_size, args.emb_size, args.size // 8,
               psp_size=args.psp_size,
               backend=args.backend,
               out_features=args.num_features,
-              dropout=args.dropout,
               dict_size=len(refer.corpus))
 
 net = nn.DataParallel(net)
