@@ -102,3 +102,6 @@ ENV/
 
 # data folder
 data/
+
+# weights folder
+weights/
