@@ -8,6 +8,7 @@ https://stackoverflow.com/a/39225039/1143629
 
 
 import requests
+import progressbar
 
 
 def download_file_from_google_drive(id, destination):
@@ -21,8 +22,9 @@ def download_file_from_google_drive(id, destination):
     def save_response_content(response, destination):
         CHUNK_SIZE = 32768
 
+        bar = progressbar.ProgressBar()
         with open(destination, "wb") as f:
-            for chunk in response.iter_content(CHUNK_SIZE):
+            for chunk in bar(response.iter_content(CHUNK_SIZE)):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
 
