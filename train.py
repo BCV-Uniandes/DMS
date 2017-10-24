@@ -37,6 +37,9 @@ parser.add_argument('--save-folder', default='weights/',
                     help='location to save checkpoint models')
 parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
                     help='path to weight snapshot file')
+parser.add_argument('--iter-snapshot', default=None,
+                    help='path to DataLoader snapshot '
+                         '(used to resume iteration from a point)')
 parser.add_argument('--num-workers', default=2, type=int,
                     help='number of workers used in dataloading')
 parser.add_argument('--dataset', default='referit', type=str,
@@ -120,6 +123,11 @@ refer = ReferDataset(data_root=args.data,
                      max_query_len=args.time)
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+
+start_epoch = 1
+if osp.exists(args.iter_snapshot):
+    train_loader, start_epoch = torch.load(args.iter_snapshot)
+
 
 if args.val is not None:
     refer_val = ReferDataset(data_root=args.data,
@@ -219,6 +227,11 @@ def train(epoch):
             state_dict = net.state_dict()
             torch.save(state_dict, filename)
 
+            filename = 'train_iter_snapshot_{0}_{1}_{2}.pth'.format(
+                args.dataset, epoch, batch_idx)
+            filename = osp.join(args.save_folder, filename)
+            torch.save((train_loader, epoch), filename)
+
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
             cur_loss = total_loss / args.log_interval
@@ -275,7 +288,7 @@ def validate(epoch):
 if __name__ == '__main__':
     best_val_loss = None
     try:
-        for epoch in range(1, args.epochs + 1):
+        for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
             scheduler.step()
