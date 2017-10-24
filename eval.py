@@ -12,6 +12,7 @@ import os.path as osp
 # PyTorch imports
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
@@ -44,7 +45,7 @@ parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--batch-size', default=10, type=int,
+parser.add_argument('--batch-size', default=3, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
@@ -138,6 +139,7 @@ def evaluate():
             words = words.cuda()
 
         out = net(imgs, words)
+        out = F.sigmoid(out)
         out = out.data.cpu().numpy()
 
         batch_iou = iou(out, masks)
