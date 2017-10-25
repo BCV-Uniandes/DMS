@@ -25,7 +25,6 @@ from utils.transforms import ResizePad, ToNumpy
 # Other imports
 import numpy as np
 
-
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network evaluation routine')
 
@@ -44,9 +43,9 @@ parser.add_argument('--split', default='testA', type=str,
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--log-interval', type=int, default=5, metavar='N',
                     help='report interval')
-parser.add_argument('--batch-size', default=3, type=int,
+parser.add_argument('--batch-size', default=50, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
@@ -113,22 +112,37 @@ net = QSegNet(image_size, args.emb_size, args.size // 8,
 net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
+    print('Loading state dict')
     net.load_state_dict(torch.load(args.snapshot))
 
 if args.cuda:
     net.cuda()
 
 
-def iou(masks, target):
-    assert(target.shape[-2:] == masks.shape[-2:])
-    intersection = np.sum(np.logical_and(masks, target), (1, 2))
-    union = np.sum(np.logical_or(masks, target), (1, 2))
-    return intersection / union
+def intersection_and_union(out, target, thresholds):
+    assert(out.shape[-2:] == target.shape[-2:])
+    # Preallocate memory for intersections and unions in this batch
+    total_intersection = np.zeros(len(thresholds))
+    total_union = np.zeros(len(thresholds))
+    # Iterate thorugh thresholds
+    for idx, threshold in enumerate(thresholds):
+        # Apply threshold to output
+        thresholded_masks = out > threshold
+        # Compute intersections and unions
+        intersections = np.sum(np.logical_and(thresholded_masks, target), (1, 2))
+        unions = np.sum(np.logical_or(thresholded_masks, target), (1, 2))
+        # Update totals
+        total_intersection[idx] = intersections.sum()
+        total_union[idx] = unions.sum()
+    return total_intersection, total_union
 
 
 def evaluate():
+    step_size = 0.001
+    thresholds = np.arange(0,1+step_size,step_size)
     net.eval()
-    total_iou = 0
+    total_intersection = np.zeros(len(thresholds))
+    total_union = np.zeros(len(thresholds))
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(loader):
         imgs = Variable(imgs, volatile=True)
@@ -141,23 +155,40 @@ def evaluate():
 
         out = net(imgs, words)
         out = F.sigmoid(out)
-        out = out.data.cpu().numpy()
-        out = (out >= 1e-9).astype(np.float32)
+        out = out.squeeze().data.cpu().numpy()
 
-        batch_iou = iou(out, masks)
-        total_iou += np.sum(batch_iou)
+        batch_intersection, batch_union = intersection_and_union(out=out, target=masks, thresholds=thresholds)
+        
+        # Update total intersection and union
+        total_intersection += batch_intersection
+        total_union += batch_union
+
 
         if batch_idx % args.log_interval == 0:
+
+            batch_iou = batch_intersection / batch_union
+            max_batch_iou = np.amax(batch_iou)
+            which_thresh_batch = thresholds[np.argmax(batch_iou)]
+
+            partial_iou = total_intersection / total_union
+            max_partial_iou = np.amax(partial_iou)
+            which_thresh_partial = thresholds[np.argmax(partial_iou)]
+
             mean_batch_iou = np.mean(batch_iou)
+            mean_partial_iou = np.mean(partial_iou)
+
             elapsed_time = time.time() - start_time
             print('({:5d}/{:5d}) | ms/batch {:.6f} |'
+                  ' max batch IoU {:.6f} - threshold {:.3f} |'
+                  ' max partial IoU {:.6f} - threshold {:.3f} |'
                   ' batch mIoU {:.6f} | partial mIoU {:.6f}'.format(
-                      batch_idx, len(loader),
-                      elapsed_time * 1000, mean_batch_iou,
-                      total_iou / (batch_idx + 1)))
-
+                      batch_idx, len(loader), elapsed_time * 1000,
+                      max_batch_iou, which_thresh_batch,
+                      max_partial_iou, which_thresh_partial,
+                      mean_batch_iou, mean_partial_iou))
             start_time = time.time()
 
 
 if __name__ == '__main__':
+    print('Evaluating')
     evaluate()
