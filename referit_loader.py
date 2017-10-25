@@ -11,6 +11,7 @@ https://github.com/chenxi116/TF-phrasecut-public/blob/master/build_batches.py
 import os
 import cv2
 import json
+import uuid
 import torch
 import progressbar
 import numpy as np
@@ -177,7 +178,7 @@ class ReferDataset(data.Dataset):
                 rle = cocomask.frPyObjects(seg, h, w)
                 mask = np.max(cocomask.decode(rle), axis=2).astype(np.float32)
                 mask = torch.from_numpy(mask)
-                mask_file = str(ref['image_id']).zfill(12) + '.pth'
+                mask_file = str(uuid.uuid4()) + '.pth'
                 mask_filename = osp.join(self.mask_dir, mask_file)
                 if not osp.exists(mask_filename):
                     torch.save(mask, mask_filename)

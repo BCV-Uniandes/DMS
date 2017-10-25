@@ -25,6 +25,7 @@ from utils.transforms import ResizePad, ToNumpy
 # Other imports
 import numpy as np
 
+
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network evaluation routine')
 
@@ -141,6 +142,7 @@ def evaluate():
         out = net(imgs, words)
         out = F.sigmoid(out)
         out = out.data.cpu().numpy()
+        out = (out >= 1e-9).astype(np.float32)
 
         batch_iou = iou(out, masks)
         total_iou += np.sum(batch_iou)
