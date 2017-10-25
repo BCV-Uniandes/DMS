@@ -159,6 +159,8 @@ class ReferDataset(data.Dataset):
         refs = [refer.refs[ref_id] for ref_id in refer.refs
                 if refer.refs[ref_id]['split'] == setname]
 
+        refs = sorted(refs, key=lambda x: x['file_name'])
+
         if len(self.corpus) == 0:
             print('Saving dataset corpus dictionary...')
             corpus_file = osp.join(self.split_root, self.dataset, 'corpus.pth')
