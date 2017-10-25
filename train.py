@@ -37,7 +37,7 @@ parser.add_argument('--save-folder', default='weights/',
                     help='location to save checkpoint models')
 parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
                     help='path to weight snapshot file')
-parser.add_argument('--iter-snapshot', default=None,
+parser.add_argument('--iter-snapshot', default='weights/qseg_iter.pth',
                     help='path to DataLoader snapshot '
                          '(used to resume iteration from a point)')
 parser.add_argument('--num-workers', default=2, type=int,
