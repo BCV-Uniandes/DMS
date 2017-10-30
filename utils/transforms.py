@@ -40,6 +40,32 @@ class ResizePad:
         return new_img
 
 
+class CropResize:
+    """Remove padding and resize image to its original size."""
+
+    def __call__(self, img, size):
+        if not isinstance(size, (int, Iterable)):
+            raise TypeError('Got inappropriate size arg: {}'.format(size))
+        im_h, im_w = img.shape[:2]
+        input_h, input_w = size
+        scale = max(input_h / im_h, input_w / im_w)
+        resized_h = int(np.round(im_h * scale))
+        resized_w = int(np.round(im_w * scale))
+        crop_h = int(np.floor(resized_h - input_h) / 2)
+        crop_w = int(np.floor(resized_w - input_w) / 2)
+
+        resized_img = cv2.resize(img, (resized_w, resized_h))
+        if img.ndim > 2:
+            new_img = np.zeros(
+                (im_h, im_w, img.shape[-1]), dtype=resized_img.dtype)
+        else:
+            resized_img = np.expand_dims(resized_img, -1)
+            new_img = np.zeros((im_h, im_w, 1), dtype=resized_img.dtype)
+        new_img[...] = resized_img[crop_h: crop_h + input_h,
+                                   crop_w: crop_w + input_w, ...]
+        return new_img
+
+
 class ToNumpy:
     """Transform an torch.*Tensor to an numpy ndarray."""
 

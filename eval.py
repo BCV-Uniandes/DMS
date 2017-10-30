@@ -14,13 +14,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
 from models import QSegNet
 from referit_loader import ReferDataset
-from utils.transforms import ResizePad, ToNumpy
+from utils.transforms import ResizePad, CropResize
 
 # Other imports
 import numpy as np
@@ -86,11 +85,7 @@ input_transform = Compose([
         std=[0.229, 0.224, 0.225])
 ])
 
-target_transform = Compose([
-    ToNumpy(),
-    ResizePad(image_size),
-    ToTensor()
-])
+target_transform = CropResize()
 
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
@@ -99,7 +94,7 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+# loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
 net = QSegNet(image_size, args.emb_size, args.size // 8,
               num_vilstm_layers=args.vilstm_layers,
@@ -119,47 +114,28 @@ if args.cuda:
     net.cuda()
 
 
-def intersection_and_union(out, target, thresholds):
-    assert(out.shape[-2:] == target.shape[-2:])
-    # Preallocate memory for intersections and unions in this batch
-    total_intersection = np.zeros(len(thresholds))
-    total_union = np.zeros(len(thresholds))
-    # Iterate thorugh thresholds
-    for idx, threshold in enumerate(thresholds):
-        # Apply threshold to output
-        thresholded_masks = out > threshold
-        # Compute intersections and unions
-        intersections = np.sum(np.logical_and(thresholded_masks, target), (1, 2))
-        unions = np.sum(np.logical_or(thresholded_masks, target), (1, 2))
-        # Update totals
-        total_intersection[idx] = intersections.sum()
-        total_union[idx] = unions.sum()
-    return total_intersection, total_union
+def compute_mask_IU(masks, target):
+    assert(target.shape[-2:] == masks.shape[-2:])
+    intersection = np.sum(np.logical_and(masks, target))
+    union = np.sum(np.logical_or(masks, target))
+    return intersection, union
 
 
 def evaluate():
-    # Define upper boundary and number of values for the logspace
-    log_upper_boundary = 1e-6
-    num_log = 1400
-    # Define logspace
-    log_thresholds = np.logspace(np.log10(1),np.log10(1+log_upper_boundary),
-                                    num=num_log,
-                                    endpoint=False) - 1
-    # Define number of values for linspace
-    num_lin = 1500 - num_log
-    lin_thresholds = np.linspace(1+log_upper_boundary,2,
-                                    num=num_lin,
-                                    endpoint=True) - 1
-    # Define thresholds
-    thresholds = np.append(log_thresholds,lin_thresholds)
     net.eval()
-    total_intersection = np.zeros(len(thresholds))
-    total_union = np.zeros(len(thresholds))
+    score_thresh = 1e-9
+    cum_I, cum_U = 0, 0
+    eval_seg_iou_list = [.5, .6, .7, .8, .9]
+    seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
+    seg_total = 0
     start_time = time.time()
-    total_time = time.time()
-    for batch_idx, (imgs, masks, words) in enumerate(loader):
-        imgs = Variable(imgs, volatile=True)
-        masks = masks.squeeze().cpu().numpy()
+    for i in range(0, len(refer)):
+        img, mask, phrase = refer.pull_item(i)
+        words = refer.tokenize_phrase(phrase)
+        h, w, _ = img.shape
+        img = input_transform(img)
+        imgs = Variable(img, volatile=True)
+        mask = mask.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
 
         if args.cuda:
@@ -170,48 +146,29 @@ def evaluate():
         out = F.sigmoid(out)
         out = out.squeeze().data.cpu().numpy()
 
-        batch_intersection, batch_union = intersection_and_union(
-            out=out, target=masks, thresholds=thresholds)
+        out = (out >= score_thresh).astype(np.uint8)
+        out = target_transform(out, (h, w))
+        out = np.squeeze(out).astype(np.float64)
 
-        # Update total intersection and union
-        total_intersection += batch_intersection
-        total_union += batch_union
-
-        if batch_idx % args.log_interval == 0:
-            batch_iou = batch_intersection / batch_union
-            max_batch_iou = np.amax(batch_iou)
-            which_thresh_batch = thresholds[np.argmax(batch_iou)]
-
-            partial_iou = total_intersection / total_union
-            max_partial_iou = np.amax(partial_iou)
-            which_thresh_partial = thresholds[np.argmax(partial_iou)]
-
-            mean_batch_iou = np.mean(batch_iou)
-            mean_partial_iou = np.mean(partial_iou)
-
-            elapsed_time = time.time() - start_time
-            print('({:5d}/{:5d}) | ms/batch {:.6f} |'
-                  ' max batch IoU {:.6f} - threshold {:.5E} |'
-                  ' max partial IoU {:.6f} - threshold {:.5E} |'
-                  ' batch mIoU {:.6f} | partial mIoU {:.6f}'.format(
-                      batch_idx, len(loader), elapsed_time * 1000,
-                      max_batch_iou, which_thresh_batch,
-                      max_partial_iou, which_thresh_partial,
-                      mean_batch_iou, mean_partial_iou))
-            start_time = time.time()
+        inter, union = compute_mask_IU(out, mask)
+        cum_I += inter
+        cum_U += union
+        this_iou = inter / union
+        for n_eval_iou in range(len(eval_seg_iou_list)):
+            eval_seg_iou = eval_seg_iou_list[n_eval_iou]
+            seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
+        seg_total += 1
 
     # Evaluation finished. Compute total IoU and threshold that maximizes
-    total_iou = total_intersection/total_union
-    max_total_iou = np.amax(total_iou)
-    which_thresh_total = thresholds[np.argmax(total_iou)]
-    total_time = time.time() - total_time
+    for n_eval_iou in range(len(eval_seg_iou_list)):
+        print('precision@{:s} = {:.5f}'.format(
+            str(eval_seg_iou_list[n_eval_iou]),
+            seg_correct[n_eval_iou] / seg_total))
+
     print('Evaluation done. Elapsed time: {:.3f} (s) |'
-          ' max IoU {:.6f} - threshold {:.5E}'.format(
-                total_time,
-                max_total_iou, which_thresh_total))
-    
+          ' max IoU {:.6f}'.format((time.time() - start_time), cum_I / cum_U))
 
 
 if __name__ == '__main__':
-    print('Evaluating with 1500 thresholds')
+    print('Evaluating')
     evaluate()

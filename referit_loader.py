@@ -206,6 +206,9 @@ class ReferDataset(data.Dataset):
 
         return img, mask, phrase
 
+    def tokenize_phrase(self, phrase):
+        return self.corpus.tokenize(phrase, self.query_len)
+
     def __len__(self):
         return len(self.images)
 
@@ -217,5 +220,5 @@ class ReferDataset(data.Dataset):
             # mask = mask.unsqueeze(-1)
             mask = mask.byte() * 255
             mask = self.annotation_transform(mask)
-        phrase = self.corpus.tokenize(phrase, self.query_len)
+        phrase = self.tokenize_phrase(phrase)
         return img, mask, phrase
