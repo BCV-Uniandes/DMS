@@ -102,14 +102,21 @@ class ConvViLSTMCell(nn.Module):
 
     def forward(self, input_, features, hx):
         h_cur, c_cur = hx
-
-        input_ = input_.squeeze().unsqueeze(1)
+        if input_.data.shape[0] == 1:
+            # print('== 1')
+            input_ = input_.unsqueeze(0)
+        else:
+            # print('!= 1')
+            input_ = input_.squeeze().unsqueeze(1)
         lang_hid = torch.cat([h_cur, features], dim=1)
         v = self.e_conv(lang_hid)
         v = self.a_conv(torch.tanh(v))
         v = F.softmax(v)
         v = v * features
         # concatenate along channel axis
+        # print('input_ shape \t',input_.data.shape)
+        # print('h_cur shape \t',h_cur.data.shape)
+        # print('v shape \t',v.data.shape)
         combined = torch.cat([input_, h_cur, v], dim=1)
         combined = self.conv(combined)
         i, f, o, g = torch.split(

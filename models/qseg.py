@@ -43,6 +43,10 @@ class QSegNet(nn.Module):
         )
 
     def forward(self, imgs, words):
+        # if len(imgs.data.shape) != 4:
+        #     imgs = imgs.unsqueeze(0)
+        # if len(words.data.shape) != 5:
+        #     words = words.unsqueeze(0)
         imgs = self.psp(imgs)
 
         words = self.emb(words)

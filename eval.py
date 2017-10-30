@@ -23,6 +23,7 @@ from utils.transforms import ResizePad, CropResize
 
 # Other imports
 import numpy as np
+import progressbar
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network evaluation routine')
@@ -129,19 +130,19 @@ def evaluate():
     seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
     seg_total = 0
     start_time = time.time()
-    for i in range(0, len(refer)):
+    bar = progressbar.ProgressBar()
+    for i in bar(range(0, len(refer))):
         img, mask, phrase = refer.pull_item(i)
         words = refer.tokenize_phrase(phrase)
         h, w, _ = img.shape
         img = input_transform(img)
-        imgs = Variable(img, volatile=True)
+        imgs = Variable(img, volatile=True).unsqueeze(0)
         mask = mask.squeeze().cpu().numpy()
-        words = Variable(words, volatile=True)
+        words = Variable(words, volatile=True).unsqueeze(0)
 
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
-
         out = net(imgs, words)
         out = F.sigmoid(out)
         out = out.squeeze().data.cpu().numpy()

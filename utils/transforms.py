@@ -60,7 +60,8 @@ class CropResize:
                 (im_h, im_w, img.shape[-1]), dtype=resized_img.dtype)
         else:
             resized_img = np.expand_dims(resized_img, -1)
-            new_img = np.zeros((im_h, im_w, 1), dtype=resized_img.dtype)
+            new_img = np.zeros((input_h, input_w, 1), dtype=resized_img.dtype)
+
         new_img[...] = resized_img[crop_h: crop_h + input_h,
                                    crop_w: crop_w + input_w, ...]
         return new_img
