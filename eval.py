@@ -192,8 +192,8 @@ def evaluate():
 
             elapsed_time = time.time() - start_time
             print('({:5d}/{:5d}) | ms/batch {:.6f} |'
-                  ' max batch IoU {:.6f} - threshold {:.15f} |'
-                  ' max partial IoU {:.6f} - threshold {:.15f} |'
+                  ' max batch IoU {:.6f} - threshold {:.5E} |'
+                  ' max partial IoU {:.6f} - threshold {:.5E} |'
                   ' batch mIoU {:.6f} | partial mIoU {:.6f}'.format(
                       batch_idx, len(loader), elapsed_time * 1000,
                       max_batch_iou, which_thresh_batch,
@@ -207,7 +207,7 @@ def evaluate():
     which_thresh_total = thresholds[np.argmax(total_iou)]
     total_time = time.time() - total_time
     print('Evaluation done. Elapsed time: {:.3f} (s) |'
-          ' max IoU {:.6f} - threshold {:.15f}'.format(
+          ' max IoU {:.6f} - threshold {:.5E}'.format(
                 total_time,
                 max_total_iou, which_thresh_total))
     
