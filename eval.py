@@ -138,12 +138,25 @@ def intersection_and_union(out, target, thresholds):
 
 
 def evaluate():
-    step_size = 0.001
-    thresholds = np.arange(0,1+step_size,step_size)
+    # Define upper boundary and number of values for the logspace
+    log_upper_boundary = 1e-6
+    num_log = 1400
+    # Define logspace
+    log_thresholds = np.logspace(np.log10(1),np.log10(1+log_upper_boundary),
+                                    num=num_log,
+                                    endpoint=False) - 1
+    # Define number of values for linspace
+    num_lin = 1500 - num_log
+    lin_thresholds = np.linspace(1+log_upper_boundary,2,
+                                    num=num_lin,
+                                    endpoint=True) - 1
+    # Define thresholds
+    thresholds = np.append(log_thresholds,lin_thresholds)
     net.eval()
     total_intersection = np.zeros(len(thresholds))
     total_union = np.zeros(len(thresholds))
     start_time = time.time()
+    total_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(loader):
         imgs = Variable(imgs, volatile=True)
         masks = masks.squeeze().cpu().numpy()
@@ -179,8 +192,8 @@ def evaluate():
 
             elapsed_time = time.time() - start_time
             print('({:5d}/{:5d}) | ms/batch {:.6f} |'
-                  ' max batch IoU {:.6f} - threshold {:.3f} |'
-                  ' max partial IoU {:.6f} - threshold {:.3f} |'
+                  ' max batch IoU {:.6f} - threshold {:.15f} |'
+                  ' max partial IoU {:.6f} - threshold {:.15f} |'
                   ' batch mIoU {:.6f} | partial mIoU {:.6f}'.format(
                       batch_idx, len(loader), elapsed_time * 1000,
                       max_batch_iou, which_thresh_batch,
@@ -188,7 +201,18 @@ def evaluate():
                       mean_batch_iou, mean_partial_iou))
             start_time = time.time()
 
+    # Evaluation finished. Compute total IoU and threshold that maximizes
+    total_iou = total_intersection/total_union
+    max_total_iou = np.amax(total_iou)
+    which_thresh_total = thresholds[np.argmax(total_iou)]
+    total_time = time.time() - total_time
+    print('Evaluation done. Elapsed time: {:.3f} (s) |'
+          ' max IoU {:.6f} - threshold {:.15f}'.format(
+                total_time,
+                max_total_iou, which_thresh_total))
+    
+
 
 if __name__ == '__main__':
-    print('Evaluating')
+    print('Evaluating with 1500 thresholds')
     evaluate()
