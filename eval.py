@@ -45,7 +45,7 @@ parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
 parser.add_argument('--log-interval', type=int, default=5, metavar='N',
                     help='report interval')
-parser.add_argument('--batch-size', default=50, type=int,
+parser.add_argument('--batch-size', default=3, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
@@ -119,27 +119,9 @@ if args.cuda:
     net.cuda()
 
 
-def intersection_and_union(out, target, thresholds):
-    assert(out.shape[-2:] == target.shape[-2:])
-    # Preallocate memory for intersections and unions in this batch
-    total_intersection = np.zeros(len(thresholds))
-    total_union = np.zeros(len(thresholds))
-    # Iterate thorugh thresholds
-    for idx, threshold in enumerate(thresholds):
-        # Apply threshold to output
-        thresholded_masks = out > threshold
-        # Compute intersections and unions
-        intersections = np.sum(np.logical_and(thresholded_masks, target), (1, 2))
-        unions = np.sum(np.logical_or(thresholded_masks, target), (1, 2))
-        # Update totals
-        total_intersection[idx] = intersections.sum()
-        total_union[idx] = unions.sum()
-    return total_intersection, total_union
-
-
 def evaluate():
     step_size = 0.001
-    thresholds = np.arange(0,1+step_size,step_size)
+    thresholds = np.arange(0, 1 + step_size, step_size)
     net.eval()
     total_intersection = np.zeros(len(thresholds))
     total_union = np.zeros(len(thresholds))
@@ -157,15 +139,14 @@ def evaluate():
         out = F.sigmoid(out)
         out = out.squeeze().data.cpu().numpy()
 
-        batch_intersection, batch_union = intersection_and_union(out=out, target=masks, thresholds=thresholds)
-        
+        batch_intersection, batch_union = intersection_and_union(
+            out=out, target=masks, thresholds=thresholds)
+
         # Update total intersection and union
         total_intersection += batch_intersection
         total_union += batch_union
 
-
         if batch_idx % args.log_interval == 0:
-
             batch_iou = batch_intersection / batch_union
             max_batch_iou = np.amax(batch_iou)
             which_thresh_batch = thresholds[np.argmax(batch_iou)]
