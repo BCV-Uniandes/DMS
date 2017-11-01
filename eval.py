@@ -151,7 +151,11 @@ def evaluate():
         out = target_transform(out, (h, w))
         out = np.squeeze(out).astype(np.float64)
 
-        inter, union = compute_mask_IU(out, mask)
+        try:
+            inter, union = compute_mask_IU(out, mask)
+        except AssertionError as e:
+            print(out.shape, mask.shape)
+            raise e
         cum_I += inter
         cum_U += union
         this_iou = inter / union
