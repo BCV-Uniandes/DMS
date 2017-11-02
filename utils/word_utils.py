@@ -30,6 +30,8 @@ class Dictionary(object):
     def __getitem__(self, a):
         if isinstance(a, int):
             return self.idx2word[a]
+        elif isinstance(a, list):
+            return [self.idx2word[x] for x in a]
         elif isinstance(a, str):
             return self.word2idx[a]
         else:

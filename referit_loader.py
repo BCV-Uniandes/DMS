@@ -209,6 +209,9 @@ class ReferDataset(data.Dataset):
     def tokenize_phrase(self, phrase):
         return self.corpus.tokenize(phrase, self.query_len)
 
+    def untokenize_word_vector(self, words):
+        return self.corpus.dictionary[words]
+
     def __len__(self):
         return len(self.images)
 
