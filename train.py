@@ -22,6 +22,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
 from models import QSegNet
+from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizePad, ToNumpy
@@ -66,6 +67,8 @@ parser.add_argument('--milestones', default='10,20,30', type=str,
                     help='milestones (epochs) for LR decreasing')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
+parser.add_argument('--iou-loss', action='store_true',
+                    help='use IoULoss instead of BCE')
 
 # Model settings
 parser.add_argument('--size', default=320, type=int,
@@ -188,6 +191,8 @@ scheduler = MultiStepLR(
     optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
 criterion = nn.BCEWithLogitsLoss()
+if args.iou_loss:
+    criterion = IoULoss()
 
 
 def train(epoch):
