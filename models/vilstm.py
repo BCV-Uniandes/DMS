@@ -13,7 +13,6 @@ https://github.com/jihunchoi/recurrent-batch-normalization-pytorch/blob/master/b
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 
@@ -83,6 +82,7 @@ class ConvViLSTMCell(nn.Module):
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias = bias
 
+        self.softmax = nn.Softmax2d()
         # self.lang_conv = LangConv(input_size)
         self.e_conv = nn.Conv2d(in_channels=self.vis_dim + self.hidden_dim,
                                 out_channels=self.hidden_dim,
@@ -111,7 +111,7 @@ class ConvViLSTMCell(nn.Module):
         lang_hid = torch.cat([h_cur, features], dim=1)
         v = self.e_conv(lang_hid)
         v = self.a_conv(torch.tanh(v))
-        v = F.softmax(v)
+        v = self.softmax(v)
         v = v * features
         # concatenate along channel axis
         # print('input_ shape \t',input_.data.shape)
