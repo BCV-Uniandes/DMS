@@ -5,6 +5,7 @@ Custom loss function definitions.
 """
 
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class IoULoss(nn.Module):
@@ -23,6 +24,7 @@ class IoULoss(nn.Module):
         self.size_average = size_average
 
     def forward(self, input, target):
+        input = F.sigmoid(input)
         intersection = (input * target).sum()
         union = ((input + target) - (input * target)).sum()
         iou = intersection / union
