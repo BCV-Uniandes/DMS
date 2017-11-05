@@ -19,6 +19,7 @@ class IoULoss(nn.Module):
     """
 
     def __init__(self, size_average=True):
+        super().__init__()
         self.size_average = size_average
 
     def forward(self, input, target):
