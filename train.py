@@ -22,6 +22,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
 from models import QSegNet
+from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
@@ -197,8 +198,10 @@ if args.iou_loss:
 
 def train(epoch):
     net.train()
-    total_loss = 0
-    epoch_total_loss = 0
+    total_loss = AverageMeter()
+    # total_loss = 0
+    epoch_loss_stats = AverageMeter()
+    # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
@@ -216,8 +219,10 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.data[0]
-        epoch_total_loss += total_loss
+        total_loss.update(loss.data[0], imgs.size(0))
+        epoch_loss_stats.update(loss.data[0], imgs.size(0))
+        # total_loss += loss.data[0]
+        # epoch_total_loss += total_loss
 
         if args.visdom is not None:
             cur_iter = batch_idx + (epoch - 1) * len(train_loader)
@@ -239,16 +244,18 @@ def train(epoch):
 
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
-            cur_loss = total_loss / args.log_interval
+            # cur_loss = total_loss / args.log_interval
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
-                      elapsed_time * 1000, cur_loss, scheduler.get_lr()[0]))
+                      elapsed_time * 1000, total_loss.avg,
+                      scheduler.get_lr()[0]))
+            total_loss.reset()
 
         total_loss = 0
         start_time = time.time()
 
-    epoch_total_loss /= len(train_loader)
+    epoch_total_loss = epoch_loss_stats.avg
 
     if args.visdom is not None:
         vis.plot_line('epoch_plt',
@@ -260,7 +267,7 @@ def train(epoch):
 
 def validate(epoch):
     net.eval()
-    epoch_total_loss = 0
+    epoch_total_loss = AverageMeter()
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(val_loader):
         imgs = Variable(imgs, volatile=True)
@@ -274,9 +281,9 @@ def validate(epoch):
 
         out_masks = net(imgs, words)
         loss = criterion(out_masks, masks)
-        epoch_total_loss += loss.data[0]
+        epoch_total_loss.update(loss.data[0], imgs.size(0))
 
-    epoch_total_loss /= len(val_loader)
+    epoch_total_loss = epoch_total_loss.avg
     elapsed_time = time.time() - start_time
     print('[{:5d}] Validation | ms/batch {:.6f} |'
           ' loss {:.6f} | lr {:.7f}'.format(
