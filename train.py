@@ -252,7 +252,7 @@ def train(epoch):
                       scheduler.get_lr()[0]))
             total_loss.reset()
 
-        total_loss = 0
+        # total_loss = 0
         start_time = time.time()
 
     epoch_total_loss = epoch_loss_stats.avg
