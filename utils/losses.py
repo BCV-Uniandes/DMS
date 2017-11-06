@@ -28,7 +28,7 @@ class IoULoss(nn.Module):
         intersection = (input * target).sum()
         union = ((input + target) - (input * target)).sum()
         iou = intersection / union
-        iou_dual = 1 - iou
+        iou_dual = input.size(0) - iou
         if self.size_average:
             iou_dual = iou_dual / input.size(0)
         return iou_dual
