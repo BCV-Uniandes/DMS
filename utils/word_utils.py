@@ -73,10 +73,11 @@ class Corpus(object):
         if words[-1] == '.':
             words = words[:-1]
 
-        if len(words) > max_len:
-            words = words[:max_len]
-        elif len(words) < max_len:
-            words = [PAD_TOKEN] * (max_len - len(words)) + words
+        if max_len > 0:
+            if len(words) > max_len:
+                words = words[:max_len]
+            elif len(words) < max_len:
+                words = [PAD_TOKEN] * (max_len - len(words)) + words
 
         tokens = len(words)
         ids = torch.LongTensor(tokens)

@@ -119,6 +119,9 @@ target_transform = Compose([
     ToTensor()
 ])
 
+if args.batch_size == 1:
+    args.time = -1
+
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
