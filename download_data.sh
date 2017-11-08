@@ -34,7 +34,7 @@ begins_with_short_option()
 
 
 # THE DEFAULTS INITIALIZATION - OPTIONALS
-_arg_path="refeit_data"
+_arg_path="referit_data"
 
 print_help ()
 {
