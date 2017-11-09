@@ -49,6 +49,9 @@ parser.add_argument('--batch-size', default=3, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
+parser.add_argument('--no-eval', action='store_true',
+                    help='disable PyTorch evaluation mode')
+
 
 # Model settings
 parser.add_argument('--size', default=320, type=int,
@@ -123,7 +126,8 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate():
-    net.eval()
+    if not args.no_eval:
+        net.eval()
     score_thresh = 1e-9
     cum_I, cum_U = 0, 0
     eval_seg_iou_list = [.5, .6, .7, .8, .9]

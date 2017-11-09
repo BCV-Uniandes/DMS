@@ -5,7 +5,6 @@ QSegNet Visdom visualization routines.
 """
 
 # Standard lib imports
-import time
 import argparse
 import os.path as osp
 from urllib.parse import urlparse
