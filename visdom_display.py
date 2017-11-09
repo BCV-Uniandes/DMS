@@ -73,9 +73,10 @@ parser.add_argument('--vilstm-layers', default=1, type=int,
 parser.add_argument('--visdom', type=str,
                     default='http://visdom.margffoy-tuay.com',
                     help='visdom URL endpoint')
-
 parser.add_argument('--num-images', type=int, default=30,
                     help='number of images to display on visdom')
+parser.add_argument('--no-eval', action='store_true',
+                    help='disable PyTorch evaluation mode')
 
 args = parser.parse_args()
 
@@ -139,7 +140,8 @@ vis = Visdom(server=visdom_url.geturl(), port=port)
 
 
 def visualization():
-    net.eval()
+    if not args.no_eval:
+        net.eval()
     for i in range(0, args.num_images):
         imgs, masks, words = next(iter(loader))
         imgs[:, 0] *= 0.229
