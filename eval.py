@@ -120,8 +120,8 @@ if args.cuda:
 
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
-    intersection = np.sum(np.logical_and(masks, target))
-    union = np.sum(np.logical_or(masks, target))
+    intersection = (masks*target).sum()
+    union = ((masks+target) - (masks*target)).sum()
     return intersection, union
 
 
@@ -149,9 +149,11 @@ def evaluate():
             words = words.cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
-        out = out.squeeze().data.cpu().numpy()
+        # out = out.squeeze().data.cpu().numpy()
+        out = out.squeeze().data
 
-        out = (out >= score_thresh).astype(np.uint8)
+        # out = (out >= score_thresh).astype(np.uint8)
+        out = (out >= score_thresh)
         out = target_transform(out, (h, w))
         out = np.squeeze(out).astype(np.float64)
 
