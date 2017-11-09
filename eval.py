@@ -120,8 +120,8 @@ if args.cuda:
 
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
-    intersection = (masks*target).sum()
-    union = ((masks+target) - (masks*target)).sum()
+    intersection = (masks * target).sum()
+    union = ((masks + target) - (masks * target)).sum()
     return intersection, union
 
 

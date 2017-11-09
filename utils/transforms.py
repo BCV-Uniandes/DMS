@@ -65,7 +65,8 @@ class CropResize:
         crop_w = torch.floor(resized_w - input_w) // 2
 
         # resized_img = cv2.resize(img, (resized_w, resized_h))
-        resized_img = F.upsample(img, size=(resized_w, resized_h), mode='bilinear')
+        resized_img = F.upsample(img, size=(resized_h, resized_w),
+                                 mode='bilinear')
         # if img.ndim > 2:
         if img.dim() > 2:
             # new_img = np.zeros(
@@ -75,7 +76,8 @@ class CropResize:
         else:
             # resized_img = np.expand_dims(resized_img, -1)
             resized_img = resized_img.unsqueeze(-1)
-            # new_img = np.zeros((input_h, input_w, 1), dtype=resized_img.dtype)
+            # new_img = np.zeros((input_h, input_w, 1),
+            #                     dtype=resized_img.dtype)
             new_img = torch.zeros((input_h, input_w, 1))
 
         new_img[...] = resized_img[crop_h: crop_h + input_h,
