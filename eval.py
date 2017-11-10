@@ -173,9 +173,9 @@ def evaluate():
         seg_total += 1
 
         if i % args.log_interval == 0:
-        	print('this intersection',inter)
-        	print('this union',union)
-        	print('Partial IoU:',cum_I/cum_U)
+            print('this intersection', inter)
+            print('this union', union)
+            print('Partial IoU:', cum_I / cum_U)
 
     # Evaluation finished. Compute total IoU and threshold that maximizes
     for n_eval_iou in range(len(eval_seg_iou_list)):
