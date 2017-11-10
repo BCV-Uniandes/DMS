@@ -51,22 +51,21 @@ class CropResize:
     def __call__(self, img, size):
         if not isinstance(size, (int, Iterable)):
             raise TypeError('Got inappropriate size arg: {}'.format(size))
-        im_h, im_w = img.shape[:2]
+        im_h, im_w = img.data.shape[:2]
         input_h, input_w = size
-        # scale = max(input_h / im_h, input_w / im_w)
-        scale = torch.Tensor([input_h / im_h, input_w / im_w]).max()
-        # resized_h = int(np.round(im_h * scale))
-        resized_h = torch.round(im_h * scale)
-        # resized_w = int(np.round(im_w * scale))
-        resized_w = torch.round(im_w * scale)
-        # crop_h = int(np.floor(resized_h - input_h) / 2)
-        crop_h = torch.floor(resized_h - input_h) // 2
-        # crop_w = int(np.floor(resized_w - input_w) / 2)
-        crop_w = torch.floor(resized_w - input_w) // 2
-
+        scale = max(input_h / im_h, input_w / im_w)
+        # scale = torch.Tensor([[input_h / im_h, input_w / im_w]]).max()
+        resized_h = int(np.round(im_h * scale))
+        # resized_h = torch.round(im_h * scale)
+        resized_w = int(np.round(im_w * scale))
+        # resized_w = torch.round(im_w * scale)
+        crop_h = int(np.floor(resized_h - input_h) / 2)
+        # crop_h = torch.floor(resized_h - input_h) // 2
+        crop_w = int(np.floor(resized_w - input_w) / 2)
+        # crop_w = torch.floor(resized_w - input_w) // 2
+        img = img.double()
         # resized_img = cv2.resize(img, (resized_w, resized_h))
-        resized_img = F.upsample(img, size=(resized_h, resized_w),
-                                 mode='bilinear')
+        resized_img = F.upsample(img.unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w), mode='bilinear')
         # if img.ndim > 2:
         if img.dim() > 2:
             # new_img = np.zeros(
@@ -76,13 +75,16 @@ class CropResize:
         else:
             # resized_img = np.expand_dims(resized_img, -1)
             resized_img = resized_img.unsqueeze(-1)
+            # new_img = np.zeros((input_h, input_w, 1), dtype=resized_img.dtype)
+            new_img = torch.zeros((1,input_h, input_w))
             # new_img = np.zeros((input_h, input_w, 1),
             #                     dtype=resized_img.dtype)
-            new_img = torch.zeros((input_h, input_w, 1))
 
-        new_img[...] = resized_img[crop_h: crop_h + input_h,
-                                   crop_w: crop_w + input_w, ...]
-        return new_img
+        resized_img = resized_img.squeeze().unsqueeze(0)
+        # new_img[...] = resized_img[crop_h: crop_h + input_h,
+        #                           crop_w: crop_w + input_w, ...]
+
+        return resized_img[0,crop_h: crop_h + input_h,crop_w: crop_w + input_w]
 
 
 class ToNumpy:
