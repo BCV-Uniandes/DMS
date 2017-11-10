@@ -127,9 +127,9 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate():
-    # if not args.no_eval:
-    #    net.eval()
-    net.train()
+	net.train()
+    if not args.no_eval:
+       net.eval()
     score_thresh = 0
     cum_I, cum_U = 0, 0
     eval_seg_iou_list = [.5, .6, .7, .8, .9]
