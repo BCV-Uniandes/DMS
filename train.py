@@ -233,7 +233,7 @@ def train(epoch):
 
         if batch_idx % args.backup_iters == 0:
             filename = 'qsegnet_{0}_{1}_snapshot.pth'.format(
-                args.database, args.split)
+                args.dataset, args.split)
             filename = osp.join(args.save_folder, filename)
             state_dict = net.state_dict()
             torch.save(state_dict, filename)

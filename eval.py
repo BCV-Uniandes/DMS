@@ -156,7 +156,6 @@ def evaluate():
         # out = (out >= score_thresh).astype(np.uint8)
         out = target_transform(out, (h, w))
         out = (out >= score_thresh)
-        
         out = out.squeeze().data
 
         try:
