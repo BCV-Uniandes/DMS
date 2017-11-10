@@ -153,8 +153,7 @@ def evaluate():
         out = net(imgs, words)
         out = F.sigmoid(out)
         # out = out.squeeze().data.cpu().numpy()
-        out = out.squeeze().byte()
-
+        out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)
         out = target_transform(out, (h, w))
         out = (out > score_thresh)
@@ -171,6 +170,9 @@ def evaluate():
             eval_seg_iou = eval_seg_iou_list[n_eval_iou]
             seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
         seg_total += 1
+
+        if i != 0 and i % args.log_interval == 0:
+        	print('Partial IoU:',cum_I/cum_U)
 
         if i % args.log_interval == 0:
             print('this intersection', inter)

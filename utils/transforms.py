@@ -62,7 +62,6 @@ class CropResize:
         # crop_h = torch.floor(resized_h - input_h) // 2
         crop_w = int(np.floor(resized_w - input_w) / 2)
         # crop_w = torch.floor(resized_w - input_w) // 2
-        img = img.double()
         # resized_img = cv2.resize(img, (resized_w, resized_h))
         resized_img = F.upsample(
             img.unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
