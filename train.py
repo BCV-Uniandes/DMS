@@ -39,9 +39,6 @@ parser.add_argument('--save-folder', default='weights/',
                     help='location to save checkpoint models')
 parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
                     help='path to weight snapshot file')
-parser.add_argument('--iter-snapshot', default='weights/qseg_iter.pth',
-                    help='path to DataLoader snapshot '
-                         '(used to resume iteration from a point)')
 parser.add_argument('--num-workers', default=2, type=int,
                     help='number of workers used in dataloading')
 parser.add_argument('--dataset', default='referit', type=str,
@@ -70,6 +67,8 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--iou-loss', action='store_true',
                     help='use IoULoss instead of BCE')
+parser.add_argument('--start-epoch', type=int, default=1,
+                    help='epoch number to resume')
 
 # Model settings
 parser.add_argument('--size', default=320, type=int,
@@ -131,9 +130,7 @@ refer = ReferDataset(data_root=args.data,
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-start_epoch = 1
-if osp.exists(args.iter_snapshot):
-    train_loader, start_epoch = torch.load(args.iter_snapshot)
+start_epoch = args.start_epoch
 
 
 if args.val is not None:
@@ -235,15 +232,11 @@ def train(epoch):
                           update='append')
 
         if batch_idx % args.backup_iters == 0:
-            filename = 'qsegnet_{0}_{1}.pth'.format(epoch, batch_idx)
+            filename = 'qsegnet_{0}_{1}_snapshot.pth'.format(
+                args.database, args.split)
             filename = osp.join(args.save_folder, filename)
             state_dict = net.state_dict()
             torch.save(state_dict, filename)
-
-            filename = 'train_iter_snapshot_{0}_{1}_{2}.pth'.format(
-                args.dataset, epoch, batch_idx)
-            filename = osp.join(args.save_folder, filename)
-            torch.save((train_loader, epoch), filename)
 
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
@@ -288,8 +281,8 @@ def validate(epoch):
 
     epoch_total_loss = epoch_total_loss.avg
     elapsed_time = time.time() - start_time
-    print('[{:5d}] Validation | ms/batch {:.6f} |'
-          ' loss {:.6f} | lr {:.7f}'.format(
+    print('[{:5d}] Validation | elapsed time (ms) {:.6f} |'
+          ' loss {:.6f}'.format(
               epoch, elapsed_time * 1000, epoch_total_loss))
     if args.visdom is not None:
         vis.plot_line('val_plt',
@@ -305,8 +298,8 @@ if __name__ == '__main__':
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
-            train_loss = train(epoch)
             scheduler.step()
+            train_loss = train(epoch)
             val_loss = train_loss
             if args.val is not None:
                 val_loss = validate(epoch)
