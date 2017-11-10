@@ -69,6 +69,9 @@ parser.add_argument('--iou-loss', action='store_true',
                     help='use IoULoss instead of BCE')
 parser.add_argument('--start-epoch', type=int, default=1,
                     help='epoch number to resume')
+parser.add_argument('--optim-snapshot', type=str,
+                    default='weights/qsegnet_optim.pth',
+                    help='path to optimizer state snapshot')
 
 # Model settings
 parser.add_argument('--size', default=320, type=int,
@@ -188,9 +191,15 @@ if args.visdom is not None:
                            legend=['Loss'])
 
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
+
+last_epoch = -1
+if osp.exists(args.optim_snapshot):
+    optimizer.load_state_dict(torch.load(args.optim_snapshot))
+    last_epoch = args.start_epoch
+
 scheduler = MultiStepLR(
     optimizer, milestones=[int(x) for x in args.milestones.split(',')],
-    last_epoch=(args.start_epoch - 1))
+    last_epoch=last_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
@@ -238,6 +247,12 @@ def train(epoch):
             filename = osp.join(args.save_folder, filename)
             state_dict = net.state_dict()
             torch.save(state_dict, filename)
+
+            optim_filename = 'qsegnet_{0}_{1}_optim.pth'.format(
+                args.dataset, args.split)
+            optim_filename = osp.join(args.save_folder, optim_filename)
+            state_dict = optimizer.state_dict()
+            torch.save(state_dict, optim_filename)
 
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
