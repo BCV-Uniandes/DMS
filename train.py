@@ -135,7 +135,6 @@ train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
 start_epoch = args.start_epoch
 
-
 if args.val is not None:
     refer_val = ReferDataset(data_root=args.data,
                              dataset=args.dataset,
@@ -192,14 +191,14 @@ if args.visdom is not None:
 
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
-last_epoch = -1
+scheduler = MultiStepLR(
+    optimizer, milestones=[int(x) for x in args.milestones.split(',')])
+
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
-    last_epoch = args.start_epoch
+    # last_epoch = args.start_epoch
 
-scheduler = MultiStepLR(
-    optimizer, milestones=[int(x) for x in args.milestones.split(',')],
-    last_epoch=last_epoch)
+scheduler.step(args.start_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
