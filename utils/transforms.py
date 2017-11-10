@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from collections import Iterable
 
-import torch.nn.Functional as F
+import torch.nn.functional as F
 
 
 class ResizePad:
@@ -33,7 +33,7 @@ class ResizePad:
         resized_img = cv2.resize(img, (resized_w, resized_h))
 
         # if img.ndim > 2:
-        if img.dim() > 2:
+        if img.ndim > 2:
             new_img = np.zeros(
                 (self.h, self.w, img.shape[-1]), dtype=resized_img.dtype)
         else:

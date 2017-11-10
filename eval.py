@@ -141,21 +141,23 @@ def evaluate():
         h, w, _ = img.shape
         img = input_transform(img)
         imgs = Variable(img, volatile=True).unsqueeze(0)
-        mask = mask.squeeze().cpu().numpy()
+        mask = mask.squeeze()
         words = Variable(words, volatile=True).unsqueeze(0)
 
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
+            mask = mask.byte().cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
         # out = out.squeeze().data.cpu().numpy()
-        out = out.squeeze().data
+        out = out.squeeze().byte()
 
         # out = (out >= score_thresh).astype(np.uint8)
-        out = (out >= score_thresh)
         out = target_transform(out, (h, w))
-        out = np.squeeze(out).astype(np.float64)
+        out = (out >= score_thresh)
+        
+        out = out.squeeze().data
 
         try:
             inter, union = compute_mask_IU(out, mask)
