@@ -172,7 +172,7 @@ def evaluate():
         seg_total += 1
 
         if i != 0 and i % args.log_interval == 0:
-        	print('Partial IoU:',cum_I/cum_U)
+            print('Partial IoU:', cum_I / cum_U)
 
         if i % args.log_interval == 0:
             print('this intersection', inter)
