@@ -43,7 +43,7 @@ parser.add_argument('--split', default='testA', type=str,
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
-parser.add_argument('--log-interval', type=int, default=5, metavar='N',
+parser.add_argument('--log-interval', type=int, default=500, metavar='N',
                     help='report interval')
 parser.add_argument('--batch-size', default=3, type=int,
                     help='Batch size for training')
@@ -120,21 +120,23 @@ if args.cuda:
 
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
-    intersection = (masks * target).sum()
-    union = ((masks + target) - (masks * target)).sum()
+    temp = (masks * target)
+    intersection = temp.sum()
+    union = ((masks + target) - temp).sum()
     return intersection, union
 
 
 def evaluate():
-    if not args.no_eval:
-        net.eval()
-    score_thresh = 1e-9
+    # if not args.no_eval:
+    #    net.eval()
+    net.train()
+    score_thresh = 0
     cum_I, cum_U = 0, 0
     eval_seg_iou_list = [.5, .6, .7, .8, .9]
     seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
     seg_total = 0
     start_time = time.time()
-    bar = progressbar.ProgressBar()
+    bar = progressbar.ProgressBar(redirect_stdout=True)
     for i in bar(range(0, len(refer))):
         img, mask, phrase = refer.pull_item(i)
         words = refer.tokenize_phrase(phrase)
@@ -155,7 +157,7 @@ def evaluate():
 
         # out = (out >= score_thresh).astype(np.uint8)
         out = target_transform(out, (h, w))
-        out = (out >= score_thresh)
+        out = (out > score_thresh)
         out = out.squeeze().data
 
         try:
@@ -169,6 +171,11 @@ def evaluate():
             eval_seg_iou = eval_seg_iou_list[n_eval_iou]
             seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
         seg_total += 1
+
+        if i % args.log_interval == 0:
+        	print('this intersection',inter)
+        	print('this union',union)
+        	print('Partial IoU:',cum_I/cum_U)
 
     # Evaluation finished. Compute total IoU and threshold that maximizes
     for n_eval_iou in range(len(eval_seg_iou_list)):
