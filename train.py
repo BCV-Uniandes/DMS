@@ -189,7 +189,8 @@ if args.visdom is not None:
 
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
 scheduler = MultiStepLR(
-    optimizer, milestones=[int(x) for x in args.milestones.split(',')])
+    optimizer, milestones=[int(x) for x in args.milestones.split(',')],
+    last_epoch=(args.start_epoch - 1))
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
