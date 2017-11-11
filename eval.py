@@ -127,13 +127,17 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate():
-	net.train()
+    net.train()
     if not args.no_eval:
-       net.eval()
-    score_thresh = 0
-    cum_I, cum_U = 0, 0
+        net.eval()
+    score_thresh = np.concatenate([[0],
+                                    np.logspace(start=-16,stop=-2,num=10,endpoint=True),
+                                    np.arange(start=0.05,stop=0.96,step=0.05)]).tolist()
+    cum_I = torch.zeros(len(score_thresh))
+    cum_U = torch.zeros(len(score_thresh))
     eval_seg_iou_list = [.5, .6, .7, .8, .9]
-    seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
+    # seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
+    seg_correct = torch.zeros(len(eval_seg_iou_list),len(score_thresh))
     seg_total = 0
     start_time = time.time()
     bar = progressbar.ProgressBar(redirect_stdout=True)
@@ -149,41 +153,81 @@ def evaluate():
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
-            mask = mask.byte().cuda()
+            mask = mask.float().cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
         # out = out.squeeze().data.cpu().numpy()
         out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)
         out = target_transform(out, (h, w))
-        out = (out > score_thresh)
-        out = out.squeeze().data
 
-        try:
-            inter, union = compute_mask_IU(out, mask)
-        except AssertionError as e:
-            continue
+        inter = torch.zeros(len(score_thresh))
+        union = torch.zeros(len(score_thresh))
+        for idx, thresh in enumerate(score_thresh):
+            thresholded_out = (out > thresh).float().data
+            try:
+                inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
+            except AssertionError as e:
+                inter[idx] = 0
+                union[idx] = mask.sum()
+                # continue
+
         cum_I += inter
         cum_U += union
         this_iou = inter / union
-        for n_eval_iou in range(len(eval_seg_iou_list)):
-            eval_seg_iou = eval_seg_iou_list[n_eval_iou]
-            seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
+        # for n_eval_iou in range(len(eval_seg_iou_list)):
+        #     eval_seg_iou = eval_seg_iou_list[n_eval_iou]
+        #     seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
+
+        for idx, seg_iou in enumerate(eval_seg_iou_list):
+            for jdx in range(len(score_thresh)):
+                seg_correct[idx,jdx] += (this_iou[jdx] >= seg_iou)
+
         seg_total += 1
 
-        if i != 0 and i % args.log_interval == 0:
-            print('Partial IoU:', cum_I / cum_U)
+        if (i != 0 and i % args.log_interval == 0) or (i == len(refer)):
+            temp_cum_iou = cum_I / cum_U
+            print('-' * 32)
+            print('Accumulated IoUs at different thresholds:')
+            print(' ')
+            print('{:15}| {:15}'.format('Thresholds','mIoU'))
+            print('-' * 32)
+            for idx, thresh in enumerate(score_thresh):
+                print('{:<15.3E}| {:<15.13f}'.format(thresh,temp_cum_iou[idx]))
 
+        if i == 13:
+            break
 
-    # Evaluation finished. Compute total IoU and threshold that maximizes
-    for n_eval_iou in range(len(eval_seg_iou_list)):
-        print('precision@{:s} = {:.5f}'.format(
-            str(eval_seg_iou_list[n_eval_iou]),
-            seg_correct[n_eval_iou] / seg_total))
+    print('Finished for-loop')
+    # Evaluation finished. Compute total IoUs and threshold that maximizes
+    for jdx, thresh in enumerate(score_thresh):
+        print('-' * 32)
+        print('precision@X for Threshold {:<15.3E}'.format(thresh))
+        for idx, seg_iou in enumerate(eval_seg_iou_list):
+            print('precision@{:s} = {:.5f}'.format(
+                str(seg_iou), seg_correct[idx,jdx] / seg_total))
 
-    print('Evaluation done. Elapsed time: {:.3f} (s) |'
-          ' max IoU {:.6f}'.format((time.time() - start_time), cum_I / cum_U))
+    print('-' * 32)
+    print('AAAAAAAAA')
+    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(time.time() - start_time))
+    print('BBBBBBBBB')
+    final_ious = cum_I / cum_U
+    print('EEEEEEEEE')
+    max_iou, max_idx = torch.max(final_ious, 0)
+    max_iou = float(max_iou.numpy())
+    max_idx = int(max_idx.numpy())
+    thresh = score_thresh[max_idx]
+    print('max_idx',max_idx)
+    print('thresh',thresh)
+    print('max_iou',max_iou)
 
+    print('FFFFFFFFFF')
+    # mystr = 'Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(max_iou, thresh)
+    print('GGGGGGGGGG')
+    # mystr
+    print('CCCCCCCCC')
+    # print(mystr)
+    print('DDDDDDDDD')
 
 if __name__ == '__main__':
     print('Evaluating')
