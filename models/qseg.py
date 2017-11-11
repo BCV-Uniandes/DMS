@@ -6,7 +6,7 @@ Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 from .vilstm import ViLSTM, ConvViLSTMCell
 from .psp.pspnet import PSPNet, PSPUpsample
 
@@ -48,9 +48,13 @@ class QSegNet(nn.Module):
         # if len(words.data.shape) != 5:
         #     words = words.unsqueeze(0)
         imgs = self.psp(imgs)
-
+        # normalize
+        imgs = F.normalize(imgs, dim=1)
         words = self.emb(words)
+
         out, _ = self.lstm(words)
+        # normalize
+        out = F.normalize(out, dim=2)
 
         # x_x is of size BxLxHxH
         # B: Batch Size
@@ -83,6 +87,6 @@ class QSegNet(nn.Module):
 
         p = self.up_3(p)
         p = self.drop_2(p)
-
+        # normalize?
         return self.final(p)
         # return mask
