@@ -141,8 +141,8 @@ def evaluate():
     seg_total = 0
     start_time = time.time()
     bar = progressbar.ProgressBar(redirect_stdout=True)
-    # for i in bar(range(0, len(refer))):
-    for i in bar(range(0, 13)):
+    for i in bar(range(0, len(refer))):
+    # for i in bar(range(0, 13)):
         img, mask, phrase = refer.pull_item(i)
         words = refer.tokenize_phrase(phrase)
         h, w, _ = img.shape
