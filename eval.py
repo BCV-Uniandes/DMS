@@ -43,7 +43,7 @@ parser.add_argument('--split', default='testA', type=str,
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
-parser.add_argument('--log-interval', type=int, default=500, metavar='N',
+parser.add_argument('--log-interval', type=int, default=1000, metavar='N',
                     help='report interval')
 parser.add_argument('--batch-size', default=3, type=int,
                     help='Batch size for training')
@@ -141,7 +141,8 @@ def evaluate():
     seg_total = 0
     start_time = time.time()
     bar = progressbar.ProgressBar(redirect_stdout=True)
-    for i in bar(range(0, len(refer))):
+    # for i in bar(range(0, len(refer))):
+    for i in bar(range(0, 13)):
         img, mask, phrase = refer.pull_item(i)
         words = refer.tokenize_phrase(phrase)
         h, w, _ = img.shape
@@ -187,18 +188,14 @@ def evaluate():
 
         if (i != 0 and i % args.log_interval == 0) or (i == len(refer)):
             temp_cum_iou = cum_I / cum_U
-            print('-' * 32)
-            print('Accumulated IoUs at different thresholds:')
             print(' ')
-            print('{:15}| {:15}'.format('Thresholds','mIoU'))
+            print('Accumulated IoUs at different thresholds:')
+            print('{:15}| {:15} |'.format('Thresholds','mIoU'))
             print('-' * 32)
             for idx, thresh in enumerate(score_thresh):
-                print('{:<15.3E}| {:<15.13f}'.format(thresh,temp_cum_iou[idx]))
+                print('{:<15.3E}| {:<15.13f} |'.format(thresh,temp_cum_iou[idx]))
+            print('-' * 32)
 
-        if i == 13:
-            break
-
-    print('Finished for-loop')
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
         print('-' * 32)
@@ -206,28 +203,24 @@ def evaluate():
         for idx, seg_iou in enumerate(eval_seg_iou_list):
             print('precision@{:s} = {:.5f}'.format(
                 str(seg_iou), seg_correct[idx,jdx] / seg_total))
-
-    print('-' * 32)
-    print('AAAAAAAAA')
-    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(time.time() - start_time))
-    print('BBBBBBBBB')
+    
+    # Print final accumulated IoUs
     final_ious = cum_I / cum_U
-    print('EEEEEEEEE')
+    print('-' * 32 + '\n' + '')
+    print('FINAL accumulated IoUs at different thresholds:')
+    print('{:15}| {:15} |'.format('Thresholds','mIoU'))
+    print('-' * 32)
+    for idx, thresh in enumerate(score_thresh):
+        print('{:<15.3E}| {:<15.13f} |'.format(thresh,final_ious[idx]))
+    print('-' * 32)
+
     max_iou, max_idx = torch.max(final_ious, 0)
     max_iou = float(max_iou.numpy())
     max_idx = int(max_idx.numpy())
-    thresh = score_thresh[max_idx]
-    print('max_idx',max_idx)
-    print('thresh',thresh)
-    print('max_iou',max_iou)
 
-    print('FFFFFFFFFF')
-    # mystr = 'Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(max_iou, thresh)
-    print('GGGGGGGGGG')
-    # mystr
-    print('CCCCCCCCC')
-    # print(mystr)
-    print('DDDDDDDDD')
+    # Print maximum IoU
+    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(time.time() - start_time))
+    print('Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(max_iou, score_thresh[max_idx]))
 
 if __name__ == '__main__':
     print('Evaluating')
