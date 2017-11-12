@@ -74,6 +74,8 @@ parser.add_argument('--visdom', type=str,
                     help='visdom URL endpoint')
 parser.add_argument('--num-images', type=int, default=30,
                     help='number of images to display on visdom')
+parser.add_argument('--heatmap', action='store_true',
+                    help='use heatmap to display ma')
 parser.add_argument('--no-eval', action='store_true',
                     help='disable PyTorch evaluation mode')
 
@@ -84,6 +86,10 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
+
+if args.heatmap:
+    args.batch_size = 1
+    args.time = -1
 
 image_size = (args.size, args.size)
 
@@ -168,7 +174,10 @@ def visualization():
         out = net(imgs, words)
         out = F.sigmoid(out)
         out = out.data.cpu().numpy()
-        vis.images(out)
+        if args.heatmap:
+            vis.heatmap(out)
+        else:
+            vis.images(out)
 
 
 if __name__ == '__main__':
