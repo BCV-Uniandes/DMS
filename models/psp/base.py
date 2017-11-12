@@ -25,7 +25,8 @@ def load_weights_sequential(target, source_state):
     new_dict = OrderedDict()
     for (k1, v1), (k2, v2) in zip(
             target.state_dict().items(), source_state.items()):
-        new_dict[k1] = v2
+        if k2 in target.state_dict():
+            new_dict[k1] = v2
     target.load_state_dict(new_dict)
 
 
@@ -51,8 +52,9 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes,
-                 stride=1, downsample=None, dilation=1):
+                 stride=1, downsample=None, dilation=1, use_bn=False):
         super(BasicBlock, self).__init__()
+        self.use_bn = use_bn
         self.conv1 = conv3x3(
             inplanes, planes, stride=stride, dilation=dilation)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -66,11 +68,13 @@ class BasicBlock(nn.Module):
         residual = x
 
         out = self.conv1(x)
-        out = self.bn1(out)
+        if self.use_bn:
+            out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
-        out = self.bn2(out)
+        if self.use_bn:
+            out = self.bn2(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
@@ -85,8 +89,10 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes,
-                 stride=1, downsample=None, dilation=1):
+                 stride=1, downsample=None, dilation=1,
+                 use_bn=False):
         super(Bottleneck, self).__init__()
+        self.use_bn = use_bn
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(
@@ -103,15 +109,18 @@ class Bottleneck(nn.Module):
         residual = x
 
         out = self.conv1(x)
-        out = self.bn1(out)
+        if self.use_bn:
+            out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
-        out = self.bn2(out)
+        if self.use_bn:
+            out = self.bn2(out)
         out = self.relu(out)
 
         out = self.conv3(out)
-        out = self.bn3(out)
+        if self.use_bn:
+            out = self.bn3(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
@@ -123,9 +132,10 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, layers=(3, 4, 23, 3)):
+    def __init__(self, block, layers=(3, 4, 23, 3), use_bn=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
+        self.use_bn = use_bn
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -149,22 +159,26 @@ class ResNet(nn.Module):
     def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
+            downsample_layers = [nn.Conv2d(
+                self.inplanes, planes * block.expansion,
+                kernel_size=1, stride=stride, bias=False)]
+            if self.use_bn:
+                downsample_layers.append(
+                    nn.BatchNorm2d(planes * block.expansion))
+            downsample = nn.Sequential(*downsample_layers)
 
         layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, dilation=dilation))
+            layers.append(block(self.inplanes, planes, dilation=dilation,
+                                use_bn=self.use_bn))
 
         return nn.Sequential(*layers)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn1(x)
+        if self.use_bn:
+            x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
@@ -183,15 +197,18 @@ Downsampling is changed to 8x
 
 
 class _DenseLayer(nn.Sequential):
-    def __init__(self, num_input_features, growth_rate, bn_size, drop_rate):
+    def __init__(self, num_input_features, growth_rate, bn_size, drop_rate,
+                 use_bn=False):
         super(_DenseLayer, self).__init__()
-        self.add_module('norm.1', nn.BatchNorm2d(num_input_features)),
+        if use_bn:
+            self.add_module('norm.1', nn.BatchNorm2d(num_input_features)),
         self.add_module('relu.1', nn.ReLU(inplace=True)),
         self.add_module(
             'conv.1', nn.Conv2d(
                 num_input_features, bn_size * growth_rate,
                 kernel_size=1, stride=1, bias=False)),
-        self.add_module('norm.2', nn.BatchNorm2d(bn_size * growth_rate)),
+        if use_bn:
+            self.add_module('norm.2', nn.BatchNorm2d(bn_size * growth_rate)),
         self.add_module('relu.2', nn.ReLU(inplace=True)),
         self.add_module('conv.2', nn.Conv2d(
             bn_size * growth_rate, growth_rate,
@@ -208,20 +225,22 @@ class _DenseLayer(nn.Sequential):
 
 class _DenseBlock(nn.Sequential):
     def __init__(self, num_layers, num_input_features,
-                 bn_size, growth_rate, drop_rate):
+                 bn_size, growth_rate, drop_rate, use_bn=False):
         super(_DenseBlock, self).__init__()
         for i in range(num_layers):
             layer = _DenseLayer(
                 num_input_features + i * growth_rate,
-                growth_rate, bn_size, drop_rate)
+                growth_rate, bn_size, drop_rate, use_bn=use_bn)
             self.add_module('denselayer%d' % (i + 1), layer)
 
 
 class _Transition(nn.Sequential):
     def __init__(self, num_input_features,
-                 num_output_features, downsample=True):
+                 num_output_features, downsample=True,
+                 use_bn=False):
         super(_Transition, self).__init__()
-        self.add_module('norm', nn.BatchNorm2d(num_input_features))
+        if use_bn:
+            self.add_module('norm', nn.BatchNorm2d(num_input_features))
         self.add_module('relu', nn.ReLU(inplace=True))
         self.add_module(
             'conv', nn.Conv2d(num_input_features, num_output_features,
@@ -237,25 +256,31 @@ class _Transition(nn.Sequential):
 class DenseNet(nn.Module):
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
                  num_init_features=64, bn_size=4, drop_rate=0,
-                 pretrained=True):
+                 pretrained=True, use_bn=False):
 
         super(DenseNet, self).__init__()
 
         # First convolution
-        self.start_features = nn.Sequential(OrderedDict([
-            ('conv0', nn.Conv2d(
-                3, num_init_features, kernel_size=7,
-                stride=2, padding=3, bias=False)),
-            ('norm0', nn.BatchNorm2d(num_init_features)),
-            ('relu0', nn.ReLU(inplace=True)),
-            ('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
-        ]))
+        first_layers = [('conv0', nn.Conv2d(
+            3, num_init_features, kernel_size=7,
+            stride=2, padding=3, bias=False))]
+
+        if use_bn:
+            first_layers.append(('norm0', nn.BatchNorm2d(num_init_features)))
+
+        first_layers + [('relu0', nn.ReLU(inplace=True)),
+                        ('pool0', nn.MaxPool2d(
+                            kernel_size=3, stride=2, padding=1))]
+
+        self.start_features = nn.Sequential(OrderedDict(first_layers))
 
         # Each denseblock
         num_features = num_init_features
 
         init_weights = list(densenet121(pretrained=True).features.children())
         start = 0
+        if not use_bn:
+            init_weights = init_weights[1:]
         for i, c in enumerate(self.start_features.children()):
             if pretrained:
                 c.load_state_dict(init_weights[i].state_dict())
@@ -264,9 +289,15 @@ class DenseNet(nn.Module):
         for i, num_layers in enumerate(block_config):
             block = _DenseBlock(
                 num_layers=num_layers, num_input_features=num_features,
-                bn_size=bn_size, growth_rate=growth_rate, drop_rate=drop_rate)
+                bn_size=bn_size, growth_rate=growth_rate, drop_rate=drop_rate,
+                use_bn=use_bn)
             if pretrained:
-                block.load_state_dict(init_weights[start].state_dict())
+                pretrained_dict = init_weights[start].state_dict()
+                block_state = block.state_dict()
+                for layer_name in pretrained_dict:
+                    if layer_name in block_state:
+                        block_state[layer_name] = pretrained_dict[layer_name]
+                block.load_state_dict(block_state)
             start += 1
             self.blocks.append(block)
             setattr(self, 'denseblock%d' % (i + 1), block)
@@ -276,9 +307,15 @@ class DenseNet(nn.Module):
                 downsample = i < 1
                 trans = _Transition(num_input_features=num_features,
                                     num_output_features=num_features // 2,
-                                    downsample=downsample)
+                                    downsample=downsample, use_bn=use_bn)
                 if pretrained:
-                    trans.load_state_dict(init_weights[start].state_dict())
+                    pretrained_dict = init_weights[start].state_dict()
+                    trans_state = trans.state_dict()
+                    for layer_name in pretrained_dict:
+                        if layer_name in trans_state:
+                            trans_state[layer_name] = (
+                                pretrained_dict[layer_name])
+                    trans.load_state_dict(trans_state)
                 start += 1
                 self.blocks.append(trans)
                 setattr(self, 'transition%d' % (i + 1), trans)
@@ -365,44 +402,44 @@ def squeezenet(pretrained=True):
     return SqueezeNet(pretrained)
 
 
-def densenet(pretrained=True):
-    return DenseNet(pretrained=pretrained)
+def densenet(pretrained=True, use_bn=False):
+    return DenseNet(pretrained=pretrained, use_bn=False)
 
 
-def resnet18(pretrained=True):
-    model = ResNet(BasicBlock, [2, 2, 2, 2])
+def resnet18(pretrained=True, use_bn=False):
+    model = ResNet(BasicBlock, [2, 2, 2, 2], use_bn=False)
     if pretrained:
         load_weights_sequential(
             model, model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
-def resnet34(pretrained=True):
-    model = ResNet(BasicBlock, [3, 4, 6, 3])
+def resnet34(pretrained=True, use_bn=False):
+    model = ResNet(BasicBlock, [3, 4, 6, 3], use_bn=False)
     if pretrained:
         load_weights_sequential(
             model, model_zoo.load_url(model_urls['resnet34']))
     return model
 
 
-def resnet50(pretrained=True):
-    model = ResNet(Bottleneck, [3, 4, 6, 3])
+def resnet50(pretrained=True, use_bn=False):
+    model = ResNet(Bottleneck, [3, 4, 6, 3], use_bn=False)
     if pretrained:
         load_weights_sequential(
             model, model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
-def resnet101(pretrained=True):
-    model = ResNet(Bottleneck, [3, 4, 23, 3])
+def resnet101(pretrained=True, use_bn=False):
+    model = ResNet(Bottleneck, [3, 4, 23, 3], use_bn=False)
     if pretrained:
         load_weights_sequential(
             model, model_zoo.load_url(model_urls['resnet101']))
     return model
 
 
-def resnet152(pretrained=True):
-    model = ResNet(Bottleneck, [3, 8, 36, 3])
+def resnet152(pretrained=True, use_bn=False):
+    model = ResNet(Bottleneck, [3, 8, 36, 3], use_bn=False)
     if pretrained:
         load_weights_sequential(
             model, model_zoo.load_url(model_urls['resnet152']))
