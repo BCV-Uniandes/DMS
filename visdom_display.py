@@ -175,7 +175,7 @@ def visualization():
         out = F.sigmoid(out)
         out = out.data.cpu().numpy()
         if args.heatmap:
-            vis.heatmap(out)
+            vis.heatmap(out.squeeze())
         else:
             vis.images(out)
 
