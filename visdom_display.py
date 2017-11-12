@@ -74,8 +74,8 @@ parser.add_argument('--visdom', type=str,
                     help='visdom URL endpoint')
 parser.add_argument('--num-images', type=int, default=30,
                     help='number of images to display on visdom')
-parser.add_argument('--heatmap', action='store_true',
-                    help='use heatmap to display ma')
+parser.add_argument('--heatmap', action='store_true', default=False,
+                    help='use heatmap to display mask')
 parser.add_argument('--no-eval', action='store_true',
                     help='disable PyTorch evaluation mode')
 
