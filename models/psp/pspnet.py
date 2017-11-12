@@ -43,18 +43,20 @@ class PSPModule(nn.Module):
 
 
 class PSPUpsample(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, use_bn=False):
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 3, padding=1),
-            nn.BatchNorm2d(out_channels),
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3,
+                               padding=1, output_padding=1, stride=2),
+            # nn.Conv2d(in_channels, out_channels, 3, padding=1),
+            # nn.BatchNorm2d(out_channels),
             nn.PReLU()
         )
 
     def forward(self, x):
-        h, w = 2 * x.size(2), 2 * x.size(3)
-        p = F.upsample(input=x, size=(h, w), mode='bilinear')
-        return self.conv(p)
+        # h, w = 2 * x.size(2), 2 * x.size(3)
+        # p = F.upsample(input=x, size=(h, w), mode='bilinear')
+        return self.conv(x)
 
 
 class PSPNet(nn.Module):
@@ -63,6 +65,7 @@ class PSPNet(nn.Module):
                  pretrained=True, out_features=512):
         super().__init__()
         self.feats = getattr(extractors, backend)(pretrained)
+        self.feats.eval()
         self.psp = PSPModule(psp_size, out_features, sizes)
         self.drop_1 = nn.Dropout2d(p=0.3)
 
