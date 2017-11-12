@@ -131,18 +131,19 @@ def evaluate():
     if not args.no_eval:
         net.eval()
     score_thresh = np.concatenate([[0],
-                                    np.logspace(start=-16,stop=-2,num=10,endpoint=True),
-                                    np.arange(start=0.05,stop=0.96,step=0.05)]).tolist()
+                                   np.logspace(start=-16, stop=-2, num=10,
+                                               endpoint=True),
+                                   np.arange(start=0.05, stop=0.96,
+                                             step=0.05)]).tolist()
     cum_I = torch.zeros(len(score_thresh))
     cum_U = torch.zeros(len(score_thresh))
     eval_seg_iou_list = [.5, .6, .7, .8, .9]
-    # seg_correct = np.zeros(len(eval_seg_iou_list), dtype=np.int32)
-    seg_correct = torch.zeros(len(eval_seg_iou_list),len(score_thresh))
+
+    seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
     start_time = time.time()
     bar = progressbar.ProgressBar(redirect_stdout=True)
     for i in bar(range(0, len(refer))):
-    # for i in bar(range(0, 13)):
         img, mask, phrase = refer.pull_item(i)
         words = refer.tokenize_phrase(phrase)
         h, w, _ = img.shape
@@ -182,7 +183,7 @@ def evaluate():
 
         for idx, seg_iou in enumerate(eval_seg_iou_list):
             for jdx in range(len(score_thresh)):
-                seg_correct[idx,jdx] += (this_iou[jdx] >= seg_iou)
+                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
 
         seg_total += 1
 
@@ -190,10 +191,11 @@ def evaluate():
             temp_cum_iou = cum_I / cum_U
             print(' ')
             print('Accumulated IoUs at different thresholds:')
-            print('{:15}| {:15} |'.format('Thresholds','mIoU'))
+            print('{:15}| {:15} |'.format('Thresholds', 'mIoU'))
             print('-' * 32)
             for idx, thresh in enumerate(score_thresh):
-                print('{:<15.3E}| {:<15.13f} |'.format(thresh,temp_cum_iou[idx]))
+                print('{:<15.3E}| {:<15.13f} |'.format(
+                    thresh, temp_cum_iou[idx]))
             print('-' * 32)
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
@@ -202,16 +204,16 @@ def evaluate():
         print('precision@X for Threshold {:<15.3E}'.format(thresh))
         for idx, seg_iou in enumerate(eval_seg_iou_list):
             print('precision@{:s} = {:.5f}'.format(
-                str(seg_iou), seg_correct[idx,jdx] / seg_total))
-    
+                str(seg_iou), seg_correct[idx, jdx] / seg_total))
+
     # Print final accumulated IoUs
     final_ious = cum_I / cum_U
     print('-' * 32 + '\n' + '')
     print('FINAL accumulated IoUs at different thresholds:')
-    print('{:15}| {:15} |'.format('Thresholds','mIoU'))
+    print('{:15}| {:15} |'.format('Thresholds', 'mIoU'))
     print('-' * 32)
     for idx, thresh in enumerate(score_thresh):
-        print('{:<15.3E}| {:<15.13f} |'.format(thresh,final_ious[idx]))
+        print('{:<15.3E}| {:<15.13f} |'.format(thresh, final_ious[idx]))
     print('-' * 32)
 
     max_iou, max_idx = torch.max(final_ious, 0)
@@ -219,8 +221,11 @@ def evaluate():
     max_idx = int(max_idx.numpy())
 
     # Print maximum IoU
-    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(time.time() - start_time))
-    print('Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(max_iou, score_thresh[max_idx]))
+    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(
+        time.time() - start_time))
+    print('Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(
+        max_iou, score_thresh[max_idx]))
+
 
 if __name__ == '__main__':
     print('Evaluating')

@@ -15,8 +15,9 @@ class QSegNet(nn.Module):
     def __init__(self, image_size, emb_size, hid_size, out_features=512,
                  num_vilstm_layers=2, pretrained=True, batch_first=True,
                  psp_size=1024, backend='densenet', dict_size=8054,
-                 num_lstm_layers=2, dropout=0.2):
+                 num_lstm_layers=2, dropout=0.2, norm=False):
         super().__init__()
+        self.norm = norm
         self.psp = PSPNet(n_classes=1, psp_size=psp_size,
                           pretrained=pretrained, backend=backend,
                           out_features=out_features)
@@ -49,12 +50,14 @@ class QSegNet(nn.Module):
         #     words = words.unsqueeze(0)
         imgs = self.psp(imgs)
         # normalize
-        imgs = F.normalize(imgs, dim=1)
+        if self.norm:
+            imgs = F.normalize(imgs, dim=1)
         words = self.emb(words)
 
         out, _ = self.lstm(words)
         # normalize
-        out = F.normalize(out, dim=2)
+        if self.norm:
+            out = F.normalize(out, dim=2)
 
         # x_x is of size BxLxHxH
         # B: Batch Size

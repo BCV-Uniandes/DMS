@@ -72,6 +72,8 @@ parser.add_argument('--start-epoch', type=int, default=1,
 parser.add_argument('--optim-snapshot', type=str,
                     default='weights/qsegnet_optim.pth',
                     help='path to optimizer state snapshot')
+parser.add_argument('--norm', action='store_true',
+                    help='enable language/visual features L2 normalization')
 
 # Model settings
 parser.add_argument('--size', default=320, type=int,
@@ -155,7 +157,8 @@ net = QSegNet(image_size, args.emb_size, args.size // 8,
               backend=args.backend,
               out_features=args.num_features,
               dropout=args.dropout,
-              dict_size=len(refer.corpus))
+              dict_size=len(refer.corpus),
+              norm=args.norm)
 
 net = nn.DataParallel(net)
 
