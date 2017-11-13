@@ -27,7 +27,7 @@ class QSegNet(nn.Module):
                             num_layers=num_lstm_layers)
 
         self.im_h, self.im_w = image_size
-        self.vilstm = ViLSTM(cell=ConvViLSTMCell,
+        self.vilstm = ViLSTM(cell_class=ConvViLSTMCell,
                              input_size=(self.im_h // 8, self.im_w // 8),
                              input_dim=hid_size,
                              hidden_dim=out_features,
