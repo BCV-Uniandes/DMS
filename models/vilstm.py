@@ -84,7 +84,8 @@ class ConvViLSTMCell(nn.Module):
 
         self.softmax = nn.Softmax2d()
         # self.lang_conv = LangConv(input_size)
-        self.e_conv = nn.Conv2d(in_channels=(self.input_dim + self.vis_dim +
+        self.e_conv = nn.Conv2d(in_channels=(self.input_dim * 0 +
+                                             self.vis_dim +
                                              self.hidden_dim),
                                 out_channels=self.hidden_dim,
                                 kernel_size=self.kernel_size,
@@ -95,7 +96,7 @@ class ConvViLSTMCell(nn.Module):
                                 kernel_size=self.kernel_size,
                                 padding=self.padding,
                                 bias=self.bias)
-        self.conv = nn.Conv2d(in_channels=self.input_dim + 3 * self.hidden_dim,
+        self.conv = nn.Conv2d(in_channels=self.input_dim + 2 * self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
                               padding=self.padding,
@@ -105,11 +106,12 @@ class ConvViLSTMCell(nn.Module):
         h_cur, c_cur = hx
         if input_.data.shape[0] == 1:
             # print('== 1')
-            input_ = input_.unsqueeze(0)
+            # input_ = input_.unsqueeze(0)
+            pass
         else:
             # print('!= 1')
             input_ = input_.squeeze().unsqueeze(1)
-        lang_hid = torch.cat([input_, h_cur, features], dim=1)
+        lang_hid = torch.cat([h_cur, features], dim=1)
         v = self.e_conv(lang_hid)
         v = self.a_conv(torch.tanh(v))
         v = self.softmax(v)
@@ -118,7 +120,7 @@ class ConvViLSTMCell(nn.Module):
         # print('input_ shape \t',input_.data.shape)
         # print('h_cur shape \t',h_cur.data.shape)
         # print('v shape \t',v.data.shape)
-        combined = torch.cat([input_, h_cur, v, c_cur], dim=1)
+        combined = torch.cat([input_, h_cur, v], dim=1)
         combined = self.conv(combined)
         i, f, o, g = torch.split(
             combined, self.hidden_dim, dim=1)
