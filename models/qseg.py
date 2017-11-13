@@ -26,11 +26,8 @@ class QSegNet(nn.Module):
                             batch_first=batch_first,
                             num_layers=num_lstm_layers)
 
-        self.im_h, self.im_w = image_size
-        self.vilstm = ViLSTM(cell_class=ConvViLSTMCell,
-                             input_size=(self.im_h // 8, self.im_w // 8),
-                             input_dim=hid_size,
-                             hidden_dim=out_features,
+        h, w = image_size
+        self.vilstm = ViLSTM(ConvViLSTMCell, (h // 8, w // 8), 1, out_features,
                              vis_dim=out_features,
                              kernel_size=(3, 3),
                              num_layers=1,
@@ -70,10 +67,8 @@ class QSegNet(nn.Module):
         # h_h = torch.matmul(out.unsqueeze(-1), out.unsqueeze(2))
         # h_x = torch.matmul(out.unsqueeze(-1), word_emb.unsqueeze(2))
 
-        # out: BxLxhid -> BxLxhidxh/8xw/8
-        out = out.unsqueeze(-1).unsqueeze(-1).expand(
-            out.size(0), out.size(1), out.size(2), self.im_h // 8,
-            self.im_w // 8)
+        out = out.unsqueeze(-1).expand(out.size(0), out.size(1),
+                                       out.size(2), out.size(2))
         # lang_input = h_h.unsqueeze(2)
         # lang_input = torch.cat(
         # [m.unsqueeze(2) for m in (x_x, h_h, h_x)], dim=2)

@@ -84,9 +84,7 @@ class ConvViLSTMCell(nn.Module):
 
         self.softmax = nn.Softmax2d()
         # self.lang_conv = LangConv(input_size)
-        self.e_conv = nn.Conv2d(in_channels=(self.input_dim * 0 +
-                                             self.vis_dim +
-                                             self.hidden_dim),
+        self.e_conv = nn.Conv2d(in_channels=self.vis_dim + self.hidden_dim,
                                 out_channels=self.hidden_dim,
                                 kernel_size=self.kernel_size,
                                 padding=self.padding,
@@ -106,8 +104,7 @@ class ConvViLSTMCell(nn.Module):
         h_cur, c_cur = hx
         if input_.data.shape[0] == 1:
             # print('== 1')
-            # input_ = input_.unsqueeze(0)
-            pass
+            input_ = input_.unsqueeze(0)
         else:
             # print('!= 1')
             input_ = input_.squeeze().unsqueeze(1)
