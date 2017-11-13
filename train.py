@@ -86,6 +86,8 @@ parser.add_argument('--backend', default='densenet', type=str,
                     help='default backend network to initialize PSPNet')
 parser.add_argument('--psp-size', default=1024, type=int,
                     help='number of input channels to PSPNet')
+parser.add_argument('--hid-size', default=512, type=int,
+                    help='size of lang LSTM hidden state')
 parser.add_argument('--num-features', '--features', default=512, type=int,
                     help='number of PSPNet output channels')
 parser.add_argument('--lstm-layers', default=2, type=int,
@@ -150,7 +152,7 @@ if args.val is not None:
 if not osp.exists(args.save_folder):
     os.makedirs(args.save_folder)
 
-net = QSegNet(image_size, args.emb_size, args.size // 8,
+net = QSegNet(image_size, args.emb_size, args.hid_size,
               num_vilstm_layers=args.vilstm_layers,
               num_lstm_layers=args.lstm_layers,
               psp_size=args.psp_size,
