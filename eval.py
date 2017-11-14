@@ -177,9 +177,6 @@ def evaluate():
         cum_I += inter
         cum_U += union
         this_iou = inter / union
-        # for n_eval_iou in range(len(eval_seg_iou_list)):
-        #     eval_seg_iou = eval_seg_iou_list[n_eval_iou]
-        #     seg_correct[n_eval_iou] += (this_iou >= eval_seg_iou)
 
         for idx, seg_iou in enumerate(eval_seg_iou_list):
             for jdx in range(len(score_thresh)):
