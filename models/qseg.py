@@ -49,14 +49,12 @@ class QSegNet(nn.Module):
         # if len(words.data.shape) != 5:
         #     words = words.unsqueeze(0)
         imgs = self.psp(imgs)
-        # normalize
-        if self.norm:
-            imgs = F.normalize(imgs, dim=1)
         words = self.emb(words)
-
         out, _ = self.lstm(words)
         # normalize
         if self.norm:
+            words = F.normalize(words, dim=2)
+            imgs = F.normalize(imgs, dim=1)
             out = F.normalize(out, dim=2)
 
         # x_x is of size BxLxHxH
