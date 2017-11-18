@@ -345,18 +345,18 @@ class DPN(nn.Module):
 
     def forward(self, x):
         out = self.features(x)
-        if not self.training and self.test_time_pool:
-            if self.output:
+        if self.output:
+            if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
                 out = self.classifier(out)
                 # The extra test time pool should be pooling an
                 # img_size//32 - 6 size patch
                 out = adaptive_avgmax_pool2d(out, pool_type='avgmax')
-        else:
-            if self.output:
+            else:
                 x = adaptive_avgmax_pool2d(x, pool_type='avg')
                 out = self.classifier(x)
-        return out.view(out.size(0), -1)
+            out = out.view(out.size(0), -1)
+        return out
 
     def load_state_dict(self, new_state):
         state = self.state_dict()
