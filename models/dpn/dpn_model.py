@@ -51,7 +51,8 @@ model_urls = {
 }
 
 
-def dpn68(num_classes=1000, pretrained=False, test_time_pool=True):
+def dpn68(num_classes=1000, pretrained=False, test_time_pool=True,
+          output=False):
     model = DPN(
         small=True, num_init_features=10, k_r=128, groups=32,
         k_sec=(3, 4, 12, 3), inc_sec=(16, 32, 32, 64),
@@ -66,7 +67,8 @@ def dpn68(num_classes=1000, pretrained=False, test_time_pool=True):
     return model
 
 
-def dpn68b(num_classes=1000, pretrained=False, test_time_pool=True):
+def dpn68b(num_classes=1000, pretrained=False, test_time_pool=True,
+           output=False):
     model = DPN(
         small=True, num_init_features=10, k_r=128, groups=32,
         b=True, k_sec=(3, 4, 12, 3), inc_sec=(16, 32, 32, 64),
@@ -80,7 +82,8 @@ def dpn68b(num_classes=1000, pretrained=False, test_time_pool=True):
     return model
 
 
-def dpn92(num_classes=1000, pretrained=False, test_time_pool=True, extra=True):
+def dpn92(num_classes=1000, pretrained=False, test_time_pool=True, extra=True,
+          output=False):
     model = DPN(
         num_init_features=64, k_r=96, groups=32,
         k_sec=(3, 4, 20, 3), inc_sec=(16, 32, 24, 128),
@@ -98,7 +101,8 @@ def dpn92(num_classes=1000, pretrained=False, test_time_pool=True, extra=True):
     return model
 
 
-def dpn98(num_classes=1000, pretrained=False, test_time_pool=True):
+def dpn98(num_classes=1000, pretrained=False, test_time_pool=True,
+          output=False):
     model = DPN(
         num_init_features=96, k_r=160, groups=40,
         k_sec=(3, 6, 20, 3), inc_sec=(16, 32, 32, 128),
@@ -111,7 +115,8 @@ def dpn98(num_classes=1000, pretrained=False, test_time_pool=True):
     return model
 
 
-def dpn131(num_classes=1000, pretrained=False, test_time_pool=True):
+def dpn131(num_classes=1000, pretrained=False, test_time_pool=True,
+           output=False):
     model = DPN(
         num_init_features=128, k_r=160, groups=40,
         k_sec=(4, 8, 28, 3), inc_sec=(16, 32, 32, 128),
@@ -124,7 +129,8 @@ def dpn131(num_classes=1000, pretrained=False, test_time_pool=True):
     return model
 
 
-def dpn107(num_classes=1000, pretrained=False, test_time_pool=True):
+def dpn107(num_classes=1000, pretrained=False, test_time_pool=True,
+           output=False):
     model = DPN(
         num_init_features=128, k_r=200, groups=50,
         k_sec=(4, 8, 20, 3), inc_sec=(20, 64, 64, 128),
@@ -256,7 +262,7 @@ class DualPathBlock(nn.Module):
 class DPN(nn.Module):
     def __init__(self, small=False, num_init_features=64, k_r=96, groups=32,
                  b=False, k_sec=(3, 4, 20, 3), inc_sec=(16, 32, 24, 128),
-                 num_classes=1000, test_time_pool=False):
+                 num_classes=1000, test_time_pool=False, output=False):
         super(DPN, self).__init__()
         self.test_time_pool = test_time_pool
         self.b = b
@@ -323,19 +329,23 @@ class DPN(nn.Module):
 
         self.features = nn.Sequential(blocks)
 
-        # Using 1x1 conv for the FC layer to allow the extra pooling scheme
-        self.classifier = nn.Conv2d(
-            in_chs, num_classes, kernel_size=1, bias=True)
+        self.output = output
+        if self.output:
+            # Using 1x1 conv for the FC layer to allow the extra pooling scheme
+            self.classifier = nn.Conv2d(
+                in_chs, num_classes, kernel_size=1, bias=True)
 
     def forward(self, x):
-        x = self.features(x)
+        out = self.features(x)
         if not self.training and self.test_time_pool:
-            x = F.avg_pool2d(x, kernel_size=7, stride=1)
-            out = self.classifier(x)
-            # The extra test time pool should be pooling an
-            # img_size//32 - 6 size patch
-            out = adaptive_avgmax_pool2d(out, pool_type='avgmax')
+            if self.output:
+                out = F.avg_pool2d(out, kernel_size=7, stride=1)
+                out = self.classifier(out)
+                # The extra test time pool should be pooling an
+                # img_size//32 - 6 size patch
+                out = adaptive_avgmax_pool2d(out, pool_type='avgmax')
         else:
-            x = adaptive_avgmax_pool2d(x, pool_type='avg')
-            out = self.classifier(x)
+            if self.output:
+                x = adaptive_avgmax_pool2d(x, pool_type='avg')
+                out = self.classifier(x)
         return out.view(out.size(0), -1)
