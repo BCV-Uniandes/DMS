@@ -3,9 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import argparse
 import torch
-import model_factory
+import argparse
+from dpn import model_factory
 
 try:
     import mxnet
