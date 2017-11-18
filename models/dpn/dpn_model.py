@@ -20,7 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,7 +27,6 @@ import torch.utils.model_zoo as model_zoo
 from collections import OrderedDict
 
 from dpn.adaptive_avgmax_pool import adaptive_avgmax_pool2d
-from dpn.convert_from_mxnet import convert_from_mxnet, has_mxnet
 
 
 __all__ = ['DPN', 'dpn68', 'dpn68b', 'dpn92', 'dpn98', 'dpn131', 'dpn107']
@@ -61,8 +59,8 @@ def dpn68(num_classes=1000, pretrained=False, test_time_pool=True):
     if pretrained:
         if model_urls['dpn68']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn68']))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(model, checkpoint_prefix='./pretrained/dpn68')
+        # elif has_mxnet and os.path.exists('./pretrained/'):
+            # convert_from_mxnet(model, checkpoint_prefix='./pretrained/dpn68')
         else:
             assert False, "Unable to load a pretrained model"
     return model
@@ -77,9 +75,6 @@ def dpn68b(num_classes=1000, pretrained=False, test_time_pool=True):
         if model_urls['dpn68b-extra']:
             model.load_state_dict(model_zoo.load_url(
                 model_urls['dpn68b-extra']))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(
-                model, checkpoint_prefix='./pretrained/dpn68-extra')
         else:
             assert False, "Unable to load a pretrained model"
     return model
@@ -98,8 +93,6 @@ def dpn92(num_classes=1000, pretrained=False, test_time_pool=True, extra=True):
             key += '-extra'
         if model_urls[key]:
             model.load_state_dict(model_zoo.load_url(model_urls[key]))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(model, checkpoint_prefix='./pretrained/' + key)
         else:
             assert False, "Unable to load a pretrained model"
     return model
@@ -113,8 +106,6 @@ def dpn98(num_classes=1000, pretrained=False, test_time_pool=True):
     if pretrained:
         if model_urls['dpn98']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn98']))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(model, checkpoint_prefix='./pretrained/dpn98')
         else:
             assert False, "Unable to load a pretrained model"
     return model
@@ -128,8 +119,6 @@ def dpn131(num_classes=1000, pretrained=False, test_time_pool=True):
     if pretrained:
         if model_urls['dpn131']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn131']))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(model, checkpoint_prefix='./pretrained/dpn131')
         else:
             assert False, "Unable to load a pretrained model"
     return model
@@ -144,9 +133,6 @@ def dpn107(num_classes=1000, pretrained=False, test_time_pool=True):
         if model_urls['dpn107-extra']:
             model.load_state_dict(
                 model_zoo.load_url(model_urls['dpn107-extra']))
-        elif has_mxnet and os.path.exists('./pretrained/'):
-            convert_from_mxnet(
-                model, checkpoint_prefix='./pretrained/dpn107-extra')
         else:
             assert False, "Unable to load a pretrained model"
     return model

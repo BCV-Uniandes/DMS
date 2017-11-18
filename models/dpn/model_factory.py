@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-from dpn import dpn68, dpn68b, dpn92, dpn98, dpn131, dpn107
+from dpn.dpn_model import dpn68, dpn68b, dpn92, dpn98, dpn131, dpn107
 from torchvision.models.resnet import (
     resnet18, resnet34, resnet50, resnet101, resnet152)
 from torchvision.models.densenet import (
