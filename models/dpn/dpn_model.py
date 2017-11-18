@@ -59,7 +59,7 @@ def dpn68(num_classes=1000, pretrained=False, test_time_pool=True,
     model = DPN(
         small=True, num_init_features=10, k_r=128, groups=32,
         k_sec=(3, 4, 12, 3), inc_sec=(16, 32, 32, 64),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool, output=output)
     if pretrained:
         if model_urls['dpn68']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn68']))
@@ -75,7 +75,8 @@ def dpn68b(num_classes=1000, pretrained=False, test_time_pool=True,
     model = DPN(
         small=True, num_init_features=10, k_r=128, groups=32,
         b=True, k_sec=(3, 4, 12, 3), inc_sec=(16, 32, 32, 64),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool,
+        output=output)
     if pretrained:
         if model_urls['dpn68b-extra']:
             model.load_state_dict(model_zoo.load_url(
@@ -90,7 +91,8 @@ def dpn92(num_classes=1000, pretrained=False, test_time_pool=True, extra=True,
     model = DPN(
         num_init_features=64, k_r=96, groups=32,
         k_sec=(3, 4, 20, 3), inc_sec=(16, 32, 24, 128),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool,
+        output=output)
     if pretrained:
         # there are both imagenet 5k trained, 1k finetuned 'extra' weights
         # and normal imagenet 1k trained weights for dpn92
@@ -109,7 +111,8 @@ def dpn98(num_classes=1000, pretrained=False, test_time_pool=True,
     model = DPN(
         num_init_features=96, k_r=160, groups=40,
         k_sec=(3, 6, 20, 3), inc_sec=(16, 32, 32, 128),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool,
+        output=output)
     if pretrained:
         if model_urls['dpn98']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn98']))
@@ -123,7 +126,8 @@ def dpn131(num_classes=1000, pretrained=False, test_time_pool=True,
     model = DPN(
         num_init_features=128, k_r=160, groups=40,
         k_sec=(4, 8, 28, 3), inc_sec=(16, 32, 32, 128),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool,
+        output=output)
     if pretrained:
         if model_urls['dpn131']:
             model.load_state_dict(model_zoo.load_url(model_urls['dpn131']))
@@ -137,7 +141,8 @@ def dpn107(num_classes=1000, pretrained=False, test_time_pool=True,
     model = DPN(
         num_init_features=128, k_r=200, groups=50,
         k_sec=(4, 8, 20, 3), inc_sec=(20, 64, 64, 128),
-        num_classes=num_classes, test_time_pool=test_time_pool)
+        num_classes=num_classes, test_time_pool=test_time_pool,
+        output=output)
     if pretrained:
         if model_urls['dpn107-extra']:
             model.load_state_dict(
@@ -352,3 +357,10 @@ class DPN(nn.Module):
                 x = adaptive_avgmax_pool2d(x, pool_type='avg')
                 out = self.classifier(x)
         return out.view(out.size(0), -1)
+
+    def load_state_dict(self, new_state):
+        state = self.state_dict()
+        for key in state:
+            if key in new_state:
+                state[key] = new_state[key]
+        super(DPN, self).load_state_dict(state)
