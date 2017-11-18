@@ -27,8 +27,12 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from collections import OrderedDict
 
-from adaptive_avgmax_pool import adaptive_avgmax_pool2d
-from convert_from_mxnet import convert_from_mxnet, has_mxnet
+from . import adaptive_avgmax_pool2d
+from . import convert_from_mxnet
+
+has_mxnet = convert_from_mxnet.has_mxnet
+convert_from_mxnet = convert_from_mxnet.convert_from_mxnet
+adaptive_avgmax_pool = adaptive_avgmax_pool2d.adaptive_avgmax_pool
 
 
 __all__ = ['DPN', 'dpn68', 'dpn68b', 'dpn92', 'dpn98', 'dpn131', 'dpn107']
