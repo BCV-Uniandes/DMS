@@ -9,6 +9,7 @@ import numpy as np
 from collections import Iterable
 
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 
 class ResizePad:
