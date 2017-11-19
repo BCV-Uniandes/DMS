@@ -36,3 +36,13 @@ class VisdomWrapper(Visdom):
 
     def plot_line(self, name, **kwargs):
         self.line(win=self.plots[name], **kwargs)
+
+
+def generate_bilinear_filter(stride=32):
+    # Bilinear upsampling filter
+    # Based on https://github.com/ronghanghu/text_objseg/blob/master/models/processing_tools.py#L19
+
+    f = torch.cat([torch.arange(0, stride), torch.arange(stride, 0, -1)], dim=0) / stride
+    # Weights must be of shape (in_channels, out_channels, kernel_size[0], kernel_size[1])
+    # for torch.nn.ConvTranspose2d
+    return torch.ger(f, f).unsqueeze(0).unsqueeze(0)
