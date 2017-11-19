@@ -26,7 +26,7 @@ from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
-from utils.transforms import ResizePad, ToNumpy
+from utils.transforms import ResizePad, ToNumpy, ResizeImage
 
 
 parser = argparse.ArgumentParser(
@@ -53,9 +53,9 @@ parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--backup-iters', type=int, default=1000,
+parser.add_argument('--backup-iters', type=int, default=10000,
                     help='iteration interval to perform state backups')
-parser.add_argument('--batch-size', default=5, type=int,
+parser.add_argument('--batch-size', default=1, type=int,
                     help='Batch size for training')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
@@ -76,9 +76,9 @@ parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 
 # Model settings
-parser.add_argument('--size', default=320, type=int,
+parser.add_argument('--size', default=1024, type=int,
                     help='image size')
-parser.add_argument('--time', default=20, type=int,
+parser.add_argument('--time', default=-1, type=int,
                     help='maximum time steps per batch')
 parser.add_argument('--emb-size', default=200, type=int,
                     help='word embedding dimensions')
@@ -110,18 +110,18 @@ if args.cuda:
 image_size = (args.size, args.size)
 
 input_transform = Compose([
-    ResizePad(image_size),
+    ResizeImage(image_size),
     ToTensor(),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
 ])
 
-target_transform = Compose([
-    ToNumpy(),
-    ResizePad(image_size),
-    ToTensor()
-])
+# target_transform = Compose([
+#     ToNumpy(),
+#     ResizePad(image_size),
+#     ToTensor()
+# ])
 
 if args.batch_size == 1:
     args.time = -1
@@ -130,7 +130,7 @@ refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     annotation_transform=target_transform,
+                     # annotation_transform=target_transform,
                      max_query_len=args.time)
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
@@ -142,7 +142,7 @@ if args.val is not None:
                              dataset=args.dataset,
                              split=args.val,
                              transform=input_transform,
-                             annotation_transform=target_transform,
+                             # annotation_transform=target_transform,
                              max_query_len=args.time)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size)
 
@@ -150,15 +150,20 @@ if args.val is not None:
 if not osp.exists(args.save_folder):
     os.makedirs(args.save_folder)
 
-net = QSegNet(image_size, args.emb_size, args.size // 8,
-              num_vilstm_layers=args.vilstm_layers,
-              num_lstm_layers=args.lstm_layers,
-              psp_size=args.psp_size,
-              backend=args.backend,
-              out_features=args.num_features,
-              dropout=args.dropout,
-              dict_size=len(refer.corpus),
-              norm=args.norm)
+# net = QSegNet(image_size, args.emb_size, args.size // 8,
+#               num_vilstm_layers=args.vilstm_layers,
+#               num_lstm_layers=args.lstm_layers,
+#               psp_size=args.psp_size,
+#               backend=args.backend,
+#               out_features=args.num_features,
+#               dropout=args.dropout,
+#               dict_size=len(refer.corpus),
+#               norm=args.norm)
+
+net = LangVisNet(dict_size=len(refer.corpus), emb_size=1000, hid_size=1000,
+                 vis_size=2688, num_filters=1, num_mixed_channels=1,
+                 mixed_size=1000, hid_mixed_size=1000, backend='dpn92',
+                 pretrained=True, extra=True)
 
 net = nn.DataParallel(net)
 

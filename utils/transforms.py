@@ -72,6 +72,24 @@ class CropResize:
         return resized_img[0, crop_h: crop_h + input_h,
                            crop_w: crop_w + input_w]
 
+class ResizeImage:
+    """Resize the largest of the sides of the image to a given size"""
+    def __init__(self, size):
+        if not isinstance(size, (int, Iterable)):
+            raise TypeError('Got inappropriate size arg: {}'.format(size))
+
+        self.size = size
+
+    def __call__(self, img):
+        im_h, im_w = img.shape[-2:]
+        scale = min(self.size / im_h, self.size / im_w)
+        resized_h = int(np.round(im_h * scale))
+        resized_w = int(np.round(im_w * scale))
+        out = F.upsample(Variable(img).unsqueeze(0), 
+                          size=(resized_h, resized_w),
+                          mode='bilinear').squeeze().data
+        return out
+
 
 class ToNumpy:
     """Transform an torch.*Tensor to an numpy ndarray."""

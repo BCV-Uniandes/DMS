@@ -42,23 +42,30 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         B, C, H, W = vis.size()
+        print('vis size: ',vis.size())
         vis = self.base(vis)
+        print('vis output size: ',vis.size())
 
         # LxE ?
         lang_mix = []
         lang = self.emb(lang)
+        print('lang (embeddings) size: ',lang.size())
         lang_mix.append(lang.unsqueeze(
             -1).unsqueeze(-1).expand(lang.size(0), lang.size(1),
                                      vis.size(-2), vis.size(-1)))
+        print('lang mix size: ',len(lang))
         # lang will be of size LxH
         lang, _ = self.sru(lang)
+        print('lang (output of SRU) size: ',lang.size())
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(
             -1).unsqueeze(-1).expand(lang.size(0), lang.size(1),
                                      vis.size(-2), vis.size(-1)))
+        print('lang mix size: ',len(lang))
 
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=1)
+        print('lang mix size (after concat): ',lang.size())
 
         x = Variable(torch.linspace(start=-1, end=1, steps=W).cuda())
         x = x.unsqueeze(0).expand(H, W).unsqueeze(0).unsqueeze(0)
@@ -68,21 +75,28 @@ class LangVisNet(nn.Module):
 
         # (N + 2)xH/32xW/32
         vis = torch.cat([vis, x, y], dim=1)
+        print('vis size: ',vis.size())
 
         # Size: HxL?
         lang = lang.squeeze().view(lang.size(-1), -1)
+        print('lang size (after view): ',lang.size())
         # filters dim: (F * (N + 2))xL
         filters = F.sigmoid(self.adaptative_filter(lang))
+        print('filters size: ',filters.size())
         # LxFx(N+2)x1x1
         filters = filters.view(
             time_steps, self.num_filters, self.vis_size + 2, 1, 1)
+        print('filters size (after view): ',filters.size())
         p = []
         for t in range(time_steps):
             filter = filters[t]
             p.append(F.conv2d(input=vis, weight=filter).unsqueeze(0))
 
+        print('p size: ',len(p))
+
         # LxFxH/32xW/32
         p = torch.cat(p)
+        print('p size (after concat): ',p.size())
 
         # Lx(N + 2)xH/32xW/32
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
