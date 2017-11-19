@@ -3,13 +3,14 @@
 """
 QSegNet train routines. (WIP)
 """
-
+print('Training routine')
 # Standard lib imports
 import os
 import time
 import argparse
 import os.path as osp
 from urllib.parse import urlparse
+print('Done with standard lib imports')
 
 # PyTorch imports
 import torch
@@ -19,14 +20,16 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
 from torchvision.transforms import Compose, ToTensor, Normalize
+print('Done with PyTorch imports')
 
 # Local imports
-from models import QSegNet
+# from models import QSegNet
 from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizePad, ToNumpy, ResizeImage
+print('Done with local imports')
 
 
 parser = argparse.ArgumentParser(
@@ -109,8 +112,10 @@ if args.cuda:
 
 image_size = (args.size, args.size)
 
+print('Creating transform')
+
 input_transform = Compose([
-    ResizeImage(image_size),
+    ResizeImage(args.size),
     ToTensor(),
     Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -126,12 +131,15 @@ input_transform = Compose([
 if args.batch_size == 1:
     args.time = -1
 
+print('Loading dataset')
+
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
                      # annotation_transform=target_transform,
                      max_query_len=args.time)
+print('Done loading dataset')
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
@@ -160,10 +168,12 @@ if not osp.exists(args.save_folder):
 #               dict_size=len(refer.corpus),
 #               norm=args.norm)
 
+print('Creating instance of LangVisNet')
 net = LangVisNet(dict_size=len(refer.corpus), emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, num_mixed_channels=1,
                  mixed_size=1000, hid_mixed_size=1000, backend='dpn92',
                  pretrained=True, extra=True)
+print('Done with instance')
 
 net = nn.DataParallel(net)
 
@@ -317,6 +327,7 @@ def validate(epoch):
 
 
 if __name__ == '__main__':
+    print('Beginning training')
     best_val_loss = None
     try:
         for epoch in range(start_epoch, args.epochs + 1):

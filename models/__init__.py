@@ -8,13 +8,17 @@
 
 """PyTorch models."""
 
-from .qseg import QSegNet
-from .vilstm import ViLSTM, ConvViLSTMCell
-from .psp.pspnet import PSPNet, PSPModule, PSPUpsample
+# from .qseg import QSegNet
+# from .vilstm import ViLSTM, ConvViLSTMCell
+# from .psp.pspnet import PSPNet, PSPModule, PSPUpsample
 
-ViLSTM
-PSPNet
-PSPModule,
-PSPUpsample
-QSegNet
-ConvViLSTMCell
+# ViLSTM
+# PSPNet
+# PSPModule,
+# PSPUpsample
+# QSegNet
+# ConvViLSTMCell
+
+from .langvis import LangVisNet
+
+LangVisNet
