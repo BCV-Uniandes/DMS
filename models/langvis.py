@@ -95,6 +95,7 @@ class LangVisNet(nn.Module):
         # Lx(N + F + H + E + 2)xH/32xW/32
         mixed = torch.cat([vis, lang_mix, p], dim=2)
         # LxSxH/32xW/32
+        print(mixed.size())
         q = self.comb_conv(mixed)
         # q = []
         # for t in range(time_steps):
