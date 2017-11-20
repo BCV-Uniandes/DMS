@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -161,10 +162,7 @@ if not osp.exists(args.save_folder):
 #               dict_size=len(refer.corpus),
 #               norm=args.norm)
 
-net = LangVisNet(dict_size=len(refer.corpus), emb_size=1000, hid_size=1000,
-                 vis_size=2688, num_filters=1, num_mixed_channels=1,
-                 mixed_size=1000, hid_mixed_size=1000, backend='dpn92',
-                 pretrained=True, extra=True)
+net = LangVisNet(dict_size=len(refer.corpus))
 
 # net = nn.DataParallel(net)
 
@@ -223,7 +221,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
-        masks = Variable(masks)
+        masks = Variable(masks.float().squeeze())
         words = Variable(words)
 
         if args.cuda:
@@ -233,6 +231,7 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
+        out_masks = F.upsample(out_masks, size=(masks.size(-2),masks.size(-1)), mode='bilinear').squeeze()
         loss = criterion(out_masks, masks)
         loss.backward()
         optimizer.step()
