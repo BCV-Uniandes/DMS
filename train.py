@@ -22,7 +22,6 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-# from models import QSegNet
 from models import LangVisNet
 from utils import AverageMeter
 from utils.losses import IoULoss
