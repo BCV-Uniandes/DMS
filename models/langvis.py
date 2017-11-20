@@ -122,9 +122,9 @@ class LangVisNet(nn.Module):
         'length of the sequence') but keep only the last out_h * out_w
         so that it can be reshaped to an image of such size
         """
-        output = output[-(out_h * out_w):, :, :].contiguous()
+        output = output[-(out_h * out_w):, :, :]
 
-        output = output.permute(1, 2, 0)
+        output = output.permute(1, 2, 0).contiguous()
         # output = torch.transpose(output, 0, 1)
         # output = torch.transpose(output, 1, 2).contiguous()
 
