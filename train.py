@@ -28,7 +28,7 @@ from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
-from utils.transforms import ResizePad, ToNumpy, ResizeImage
+from utils.transforms import ResizeImage
 
 
 parser = argparse.ArgumentParser(
@@ -231,7 +231,8 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(masks.size(-2),masks.size(-1)), mode='bilinear').squeeze()
+        out_masks = F.upsample(out_masks, size=(
+            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         loss = criterion(out_masks, masks)
         loss.backward()
         optimizer.step()
