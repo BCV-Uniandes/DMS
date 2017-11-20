@@ -92,7 +92,7 @@ class LangVisNet(nn.Module):
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
         # Lx(N + F + H + E + 2)xH/32xW/32
         q = torch.cat([vis, lang_mix, p], dim=2)
-        # LxSxH/32xW/32
+        # Lx1xSxH/32xW/32
         # print(mixed.size())
         q = self.comb_conv(q.squeeze(1))
         q = q.unsqueeze(1)
@@ -102,15 +102,19 @@ class LangVisNet(nn.Module):
         # q = torch.cat(q)
         # LxSx((H + W)/32)
         # q = q.view(q.size(3) * q.size(4) * q.size(0), q.size(1), q.size(2))
+        # Lx1xMxH/32xW/32
         q = q.view(q.size(0), q.size(1), q.size(2),
                    q.size(3) * q.size(4))
-        q = q.permute(3, 0, 1, 2)
+        # Lx1xMx(H*W/(32*32))
+        q = q.permute(3, 0, 1, 2).contiguous()
         # q = torch.transpose(q, 3, 0)
         # q = torch.transpose(q, 3, 1)
         # q = torch.transpose(q, 3, 2).contiguous()
+        # (H*W/(32*32))xLx1xM
         q = q.view(q.size(0) * q.size(1), q.size(2), q.size(3))
+        # L*(H*W/(32*32))x1xM
 
-        # input has dimensions: seq_length x batch_size x we_dim
+        # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.msru(q)
 
         """
@@ -118,7 +122,7 @@ class LangVisNet(nn.Module):
         'length of the sequence') but keep only the last out_h * out_w
         so that it can be reshaped to an image of such size
         """
-        output = output[-(out_h * out_w):, :, :]
+        output = output[-(out_h * out_w):, :, :].contiguous()
 
         output = output.permute(1, 2, 0)
         # output = torch.transpose(output, 0, 1)
