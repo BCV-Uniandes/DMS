@@ -49,18 +49,16 @@ class LangVisNet(nn.Module):
         lang_mix = []
         lang = self.emb(lang)
         lang = torch.transpose(lang, 0, 1)
-        temp_expanded = lang.unsqueeze(-1).unsqueeze(-1).expand(
+        lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
-            vis.size(-2), vis.size(-1))
-        lang_mix.append(temp_expanded)
+            vis.size(-2), vis.size(-1)))
         # lang will be of size LxH
         # input has dimensions: seq_length x batch_size x we_dim
         lang, _ = self.sru(lang)
         time_steps = lang.size(0)
-        temp_expanded = lang.unsqueeze(-1).unsqueeze(-1).expand(
+        lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
-            vis.size(-2), vis.size(-1))
-        lang_mix.append(temp_expanded)
+            vis.size(-2), vis.size(-1)))
 
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=2)
@@ -93,23 +91,24 @@ class LangVisNet(nn.Module):
         # Lx(N + 2)xH/32xW/32
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
         # Lx(N + F + H + E + 2)xH/32xW/32
-        mixed = torch.cat([vis, lang_mix, p], dim=2)
+        q = torch.cat([vis, lang_mix, p], dim=2)
         # LxSxH/32xW/32
         # print(mixed.size())
-        q = self.comb_conv(mixed.squeeze(1))
+        q = self.comb_conv(q.squeeze(1))
         q = q.unsqueeze(1)
         # q = []
         # for t in range(time_steps):
         #    q.append(self.comb_conv(mixed[t]).unsqueeze(0))
         # q = torch.cat(q)
         # LxSx((H + W)/32)
-        # q = q.view(q.size(0), q.size(1), q.size(2),
-        #            q.size(3) * q.size(4))
+        # q = q.view(q.size(3) * q.size(4) * q.size(0), q.size(1), q.size(2))
+        q = q.view(q.size(0), q.size(1), q.size(2),
+                   q.size(3) * q.size(4))
+        q = q.permute(3, 0, 1, 2)
         # q = torch.transpose(q, 3, 0)
         # q = torch.transpose(q, 3, 1)
         # q = torch.transpose(q, 3, 2).contiguous()
-        # q = q.view(q.size(0) * q.size(1), q.size(2), q.size(3))
-        q = q.view(q.size(3) * q.size(4) * q.size(0), q.size(1), q.size(2))
+        q = q.view(q.size(0) * q.size(1), q.size(2), q.size(3))
 
         # input has dimensions: seq_length x batch_size x we_dim
         output, _ = self.msru(q)
@@ -121,8 +120,9 @@ class LangVisNet(nn.Module):
         """
         output = output[-(out_h * out_w):, :, :]
 
-        output = torch.transpose(output, 0, 1)
-        output = torch.transpose(output, 1, 2).contiguous()
+        output = output.permute(1, 2, 0)
+        # output = torch.transpose(output, 0, 1)
+        # output = torch.transpose(output, 1, 2).contiguous()
 
         output = output.view(output.size(0), output.size(1),
                              out_h, out_w)
