@@ -171,13 +171,15 @@ def visualization():
         vis.images(masks.numpy())
         imgs = Variable(imgs, volatile=True)
         masks = target_transform(masks)
-        masks = masks.squeeze().cpu().numpy()
+        # masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
+        out = F.upsample(out, size=(
+            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         out = out.data.cpu().numpy()
         if args.heatmap:
             vis.heatmap(out.squeeze())
