@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 # PyTorch imports
 import torch
-import torch.nn as nn
+# import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(
     description='Query Segmentation Network visualization routine')
 
 # Dataloading-related settings
-parser.add_argument('--data', type=str, default='../referit_data',
+parser.add_argument('--data', type=str, default='/mnt/referit_data',
                     help='path to ReferIt splits data folder')
 parser.add_argument('--snapshot', default='../referit_iou_densenet_2_45000.pth',
                     help='path to weight snapshot file')
@@ -128,7 +128,7 @@ loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
 net = LangVisNet(dict_size=len(refer.corpus))
 
-net = nn.DataParallel(net)
+# net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
