@@ -153,6 +153,7 @@ def visualization():
         net.eval()
     for i in range(0, args.num_images):
         imgs, masks, words = next(iter(loader))
+        masks = target_transform(masks)
         imgs[:, 0] *= 0.229
         imgs[:, 1] *= 0.224
         imgs[:, 2] *= 0.225
@@ -170,16 +171,15 @@ def visualization():
         vis.images(imgs.numpy())
         vis.images(masks.numpy())
         imgs = Variable(imgs, volatile=True)
-        masks = target_transform(masks)
         # masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
         out = net(imgs, words)
-        out = F.sigmoid(out)
         out = F.upsample(out, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
+        out = F.sigmoid(out)
         out = out.data.cpu().numpy()
         if args.heatmap:
             vis.heatmap(out.squeeze())
