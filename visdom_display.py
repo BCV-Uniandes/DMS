@@ -93,11 +93,11 @@ if args.heatmap:
     args.batch_size = 1
     args.time = -1
 
-image_size = (args.size, args.size)
+# image_size = (args.size, args.size)
 
 input_transform = Compose([
     ToTensor(),
-    ResizeImage(image_size),
+    ResizeImage(args.size),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
@@ -105,7 +105,7 @@ input_transform = Compose([
 
 target_transform = Compose([
     ToTensor(),
-    ResizeImage(image_size),
+    ResizeImage(args.size),
 ])
 
 refer = ReferDataset(data_root=args.data,
