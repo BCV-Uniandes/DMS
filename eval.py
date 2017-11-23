@@ -11,15 +11,15 @@ import os.path as osp
 
 # PyTorch imports
 import torch
-import torch.nn as nn
+# import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import QSegNet
+from models import LangVisNet
 from referit_loader import ReferDataset
-from utils.transforms import ResizePad, CropResize
+from utils.transforms import ResizeImage
 
 # Other imports
 import numpy as np
@@ -82,33 +82,36 @@ if args.cuda:
 image_size = (args.size, args.size)
 
 input_transform = Compose([
-    ResizePad(image_size),
     ToTensor(),
+    ResizeImage(args.size),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
 ])
 
-target_transform = CropResize()
+# target_transform = CropResize()
 
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     annotation_transform=target_transform,
+                     # annotation_transform=target_transform,
                      max_query_len=args.time)
 
 # loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = QSegNet(image_size, args.emb_size, args.size // 8,
-              num_vilstm_layers=args.vilstm_layers,
-              num_lstm_layers=args.lstm_layers,
-              psp_size=args.psp_size,
-              backend=args.backend,
-              out_features=args.num_features,
-              dict_size=len(refer.corpus))
+# net = QSegNet(image_size, args.emb_size, args.size // 8,
+#               num_vilstm_layers=args.vilstm_layers,
+#               num_lstm_layers=args.lstm_layers,
+#               psp_size=args.psp_size,
+#               backend=args.backend,
+#               out_features=args.num_features,
+#               dict_size=len(refer.corpus))
 
-net = nn.DataParallel(net)
+# net = nn.DataParallel(net)
+
+net = LangVisNet(dict_size=len(refer.corpus))
+
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
@@ -158,10 +161,11 @@ def evaluate():
             mask = mask.float().cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
+        out = F.upsample(out, size=(h, w), mode='bilinear').squeeze()
         # out = out.squeeze().data.cpu().numpy()
         out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)
-        out = target_transform(out, (h, w))
+        # out = target_transform(out, (h, w))
 
         inter = torch.zeros(len(score_thresh))
         union = torch.zeros(len(score_thresh))
