@@ -18,9 +18,9 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import QSegNet
+from models import LangVisNet
 from referit_loader import ReferDataset
-from utils.transforms import ResizePad, ToNumpy
+from utils.transforms import ResizeImage
 
 # Other imports
 from visdom import Visdom
@@ -96,17 +96,16 @@ if args.heatmap:
 image_size = (args.size, args.size)
 
 input_transform = Compose([
-    ResizePad(image_size),
     ToTensor(),
+    ResizeImage(image_size),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
 ])
 
 target_transform = Compose([
-    ToNumpy(),
-    ResizePad(image_size),
-    ToTensor()
+    ToTensor(),
+    ResizeImage(image_size),
 ])
 
 refer = ReferDataset(data_root=args.data,
@@ -118,14 +117,16 @@ refer = ReferDataset(data_root=args.data,
 
 loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = QSegNet(image_size, args.emb_size, args.size // 8,
-              num_vilstm_layers=args.vilstm_layers,
-              num_lstm_layers=args.lstm_layers,
-              psp_size=args.psp_size,
-              backend=args.backend,
-              out_features=args.num_features,
-              dict_size=len(refer.corpus),
-              norm=args.norm)
+# net = QSegNet(image_size, args.emb_size, args.size // 8,
+#               num_vilstm_layers=args.vilstm_layers,
+#               num_lstm_layers=args.lstm_layers,
+#               psp_size=args.psp_size,
+#               backend=args.backend,
+#               out_features=args.num_features,
+#               dict_size=len(refer.corpus),
+#               norm=args.norm)
+
+net = LangVisNet(dict_size=len(refer.corpus))
 
 net = nn.DataParallel(net)
 

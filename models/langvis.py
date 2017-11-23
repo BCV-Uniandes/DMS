@@ -52,8 +52,7 @@ class LangVisNet(nn.Module):
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
-        # lang will be of size LxH
-        # input has dimensions: seq_length x batch_size x we_dim
+        # input has dimensions: seq_length x batch_size (1) x we_dim
         lang, _ = self.sru(lang)
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
@@ -123,11 +122,7 @@ class LangVisNet(nn.Module):
         so that it can be reshaped to an image of such size
         """
         output = output[-(out_h * out_w):, :, :]
-
         output = output.permute(1, 2, 0).contiguous()
-        # output = torch.transpose(output, 0, 1)
-        # output = torch.transpose(output, 1, 2).contiguous()
-
         output = output.view(output.size(0), output.size(1),
                              out_h, out_w)
 
