@@ -112,7 +112,7 @@ refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     annotation_transform=target_transform,
+                     # annotation_transform=target_transform,
                      max_query_len=args.time)
 
 loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
@@ -170,6 +170,7 @@ def visualization():
         vis.images(imgs.numpy())
         vis.images(masks.numpy())
         imgs = Variable(imgs, volatile=True)
+        masks = target_transform(masks)
         masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
         if args.cuda:
