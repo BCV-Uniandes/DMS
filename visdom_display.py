@@ -104,7 +104,7 @@ input_transform = Compose([
 ])
 
 target_transform = Compose([
-    ToTensor(),
+    # ToTensor(),
     ResizeImage(args.size),
 ])
 
