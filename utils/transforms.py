@@ -4,7 +4,8 @@
 Generic Image Transform utillities.
 """
 
-import cv2
+# import cv2
+import torch
 import numpy as np
 from collections import Iterable
 
@@ -24,24 +25,33 @@ class ResizePad:
         self.h, self.w = size
 
     def __call__(self, img):
-        h, w = img.shape[:2]
+        h, w = img.size()[-2:]
         scale = min(self.h / h, self.w / w)
         resized_h = int(np.round(h * scale))
         resized_w = int(np.round(w * scale))
         pad_h = int(np.floor(self.h - resized_h) / 2)
         pad_w = int(np.floor(self.w - resized_w) / 2)
 
-        resized_img = cv2.resize(img, (resized_w, resized_h))
+        channels = 3 if len(img.size()) > 2 else 1
+        num_unsqueeze = 1 + (len(img.size()) <= 2)
+        for i in range(num_unsqueeze):
+            img = img.unsqueeze(0)
 
+        resized_img = F.upsample(
+            Variable(img, volatile=True), size=(resized_h, resized_w),
+            mode='bilinear').data
+        # resized_img = cv2.resize(img, (resized_w, resized_h))
+
+        new_img = torch.zeros(1, channels, self.h, self.w)
         # if img.ndim > 2:
-        if img.ndim > 2:
-            new_img = np.zeros(
-                (self.h, self.w, img.shape[-1]), dtype=resized_img.dtype)
-        else:
-            resized_img = np.expand_dims(resized_img, -1)
-            new_img = np.zeros((self.h, self.w, 1), dtype=resized_img.dtype)
-        new_img[pad_h: pad_h + resized_h,
-                pad_w: pad_w + resized_w, ...] = resized_img
+        # if img.ndim > 2:
+        #     new_img = np.zeros(
+        #         (self.h, self.w, img.shape[-1]), dtype=resized_img.dtype)
+        # else:
+        #     resized_img = np.expand_dims(resized_img, -1)
+        #     new_img = np.zeros((self.h, self.w, 1), dtype=resized_img.dtype)
+        new_img[:, :, pad_h: pad_h + resized_h,
+                pad_w: pad_w + resized_w] = resized_img
         return new_img
 
 

@@ -25,9 +25,9 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from models import LangVisNet
 from utils import AverageMeter
 from utils.losses import IoULoss
-from referit_loader import ReferDataset
+from utils.transforms import ResizePad
 from utils.misc_utils import VisdomWrapper
-from utils.transforms import ResizeImage
+from referit_loader import ReferDataset, collate_fn
 
 
 parser = argparse.ArgumentParser(
@@ -112,17 +112,18 @@ image_size = (args.size, args.size)
 
 input_transform = Compose([
     ToTensor(),
-    ResizeImage(args.size),
+    ResizePad(image_size),
+    # ResizeImage(args.size),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
 ])
 
-# target_transform = Compose([
-#     ToNumpy(),
-#     ResizePad(image_size),
-#     ToTensor()
-# ])
+target_transform = Compose([
+    # ToNumpy(),
+    # ToTensor(),
+    ResizePad(image_size),
+])
 
 if args.batch_size == 1:
     args.time = -1
@@ -131,10 +132,11 @@ refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     # annotation_transform=target_transform,
+                     annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
+                          collate_fn=collate_fn)
 
 start_epoch = args.start_epoch
 
@@ -145,7 +147,8 @@ if args.val is not None:
                              transform=input_transform,
                              # annotation_transform=target_transform,
                              max_query_len=args.time)
-    val_loader = DataLoader(refer_val, batch_size=args.batch_size)
+    val_loader = DataLoader(refer_val, batch_size=args.batch_size,
+                            collate_fn=collate_fn)
 
 
 if not osp.exists(args.save_folder):
@@ -163,7 +166,7 @@ if not osp.exists(args.save_folder):
 
 net = LangVisNet(dict_size=len(refer.corpus))
 
-# net = nn.DataParallel(net)
+net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     net.load_state_dict(torch.load(args.snapshot))
@@ -228,10 +231,14 @@ def train(epoch):
             masks = masks.cuda()
             words = words.cuda()
 
+        print(imgs.size())
+        print(masks.size())
+        print(words.size())
+
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
+        # out_masks = F.upsample(out_masks, size=(
+        #     masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         loss = criterion(out_masks, masks)
         loss.backward()
         optimizer.step()
@@ -291,12 +298,12 @@ def validate(epoch):
     for batch_idx, (imgs, masks, words) in enumerate(val_loader):
         imgs = Variable(imgs, volatile=True)
         masks = Variable(masks, volatile=True)
-        words = Variable(words, volatile=True)
+        words = [Variable(w, volatile=True) for w in words]
 
         if args.cuda:
             imgs = imgs.cuda()
             masks = masks.cuda()
-            words = words.cuda()
+            words = [w.cuda() for w in words]
 
         out_masks = net(imgs, words)
         loss = criterion(out_masks, masks)

@@ -24,7 +24,8 @@ class LangVisNet(nn.Module):
             backend, 1, pretrained=pretrained, extra=extra)
 
         self.emb = nn.Embedding(dict_size, emb_size)
-        self.sru = SRU(emb_size, hid_size)
+        # self.sru = SRU(emb_size, hid_size)
+        self.sru = nn.LSTM(emb_size, hid_size, num_layers=2)
 
         self.adaptative_filter = nn.Linear(
             in_features=hid_size, out_features=(num_filters * (vis_size + 2)))
@@ -35,13 +36,18 @@ class LangVisNet(nn.Module):
                                    kernel_size=1,
                                    padding=0)
 
-        self.msru = SRU(mixed_size, hid_mixed_size,
-                        num_layers=msru_layers)
+        # self.msru = SRU(mixed_size, hid_mixed_size,
+        #                 num_layers=msru_layers)
+        self.msru = nn.LSTM(mixed_size, hid_mixed_size, num_layers=msru_layers)
         self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
                                          out_channels=1,
                                          kernel_size=1)
 
     def forward(self, vis, lang):
+        print("Model input: {0}".format(vis.size()))
+        print("Lang input: {0}".format(lang.size()))
+        print(lang[:, -1])
+        lang = lang[:, :int(lang[:, -1].data.cpu())]
         B, C, H, W = vis.size()
         vis = self.base(vis)
 
