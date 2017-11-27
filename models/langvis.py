@@ -14,9 +14,9 @@ from .dpn.model_factory import create_model
 
 class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
-                 vis_size=2688, num_filters=1, num_mixed_channels=1,
-                 mixed_size=1000, hid_mixed_size=1005, backend='dpn92',
-                 pretrained=True, extra=True, msru_layers=3):
+                 vis_size=2688, num_filters=1, mixed_size=1000,
+                 hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
+                 backend='dpn92', lstm=False, pretrained=True, extra=True):
         super().__init__()
         self.vis_size = vis_size
         self.num_filters = num_filters
@@ -24,7 +24,10 @@ class LangVisNet(nn.Module):
             backend, 1, pretrained=pretrained, extra=extra)
 
         self.emb = nn.Embedding(dict_size, emb_size)
-        self.sru = SRU(emb_size, hid_size)
+        self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers)
+        if lstm:
+            self.lang_model = nn.LSTM(
+                emb_size, hid_size, num_layers=lang_layers)
 
         self.adaptative_filter = nn.Linear(
             in_features=hid_size, out_features=(num_filters * (vis_size + 2)))
@@ -35,8 +38,11 @@ class LangVisNet(nn.Module):
                                    kernel_size=1,
                                    padding=0)
 
-        self.msru = SRU(mixed_size, hid_mixed_size,
-                        num_layers=msru_layers)
+        self.mrnn = SRU(mixed_size, hid_mixed_size,
+                        num_layers=mixed_layers)
+        if lstm:
+            self.mrnn = nn.LSTM(mixed_size, hid_mixed_size,
+                                num_layers=mixed_layers)
         self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
                                          out_channels=1,
                                          kernel_size=1)
@@ -53,7 +59,7 @@ class LangVisNet(nn.Module):
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
         # input has dimensions: seq_length x batch_size (1) x we_dim
-        lang, _ = self.sru(lang)
+        lang, _ = self.lang_model(lang)
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
@@ -114,7 +120,7 @@ class LangVisNet(nn.Module):
         # L*(H*W/(32*32))x1xM
 
         # input has dimensions: seq_length x batch_size x mix_size
-        output, _ = self.msru(q)
+        output, _ = self.mrnn(q)
 
         """
         Take all the hidden states (one for each pixel of every

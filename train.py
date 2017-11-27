@@ -81,20 +81,26 @@ parser.add_argument('--size', default=1024, type=int,
                     help='image size')
 parser.add_argument('--time', default=-1, type=int,
                     help='maximum time steps per batch')
-parser.add_argument('--emb-size', default=200, type=int,
+parser.add_argument('--emb-size', default=1000, type=int,
                     help='word embedding dimensions')
-parser.add_argument('--backend', default='densenet', type=str,
-                    help='default backend network to initialize PSPNet')
-parser.add_argument('--psp-size', default=1024, type=int,
-                    help='number of input channels to PSPNet')
-parser.add_argument('--num-features', '--features', default=512, type=int,
-                    help='number of PSPNet output channels')
-parser.add_argument('--lstm-layers', default=2, type=int,
-                    help='number of LSTM stacked layers')
-parser.add_argument('--vilstm-layers', default=1, type=int,
-                    help='number of ViLSTM stacked layers')
-parser.add_argument('--dropout', default=0.2, type=float,
-                    help='dropout constant to LSTM output layer')
+parser.add_argument('--hid-size', default=1000, type=int,
+                    help='language model hidden size')
+parser.add_argument('--vis-size', default=2688, type=int,
+                    help='number of visual filters')
+parser.add_argument('--num-filters', default=1, type=int,
+                    help='number of filters to learn')
+parser.add_argument('--mixed-size', default=1000, type=int,
+                    help='number of combined lang/visual features filters')
+parser.add_argument('--hid-mixed-size', default=1005, type=int,
+                    help='multimodal model hidden size')
+parser.add_argument('--lang-layers', default=2, type=int,
+                    help='number of SRU/LSTM stacked layers')
+parser.add_argument('--mixed-layers', default=3, type=int,
+                    help='number of mLSTM/mSRU stacked layers')
+parser.add_argument('--backend', default='dpn92', type=str,
+                    help='default backend network to LangVisNet')
+parser.add_argument('--lstm', action='store_true', default=False,
+                    help='use LSTM units for RNN modules. Default SRU')
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -161,7 +167,17 @@ if not osp.exists(args.save_folder):
 #               dict_size=len(refer.corpus),
 #               norm=args.norm)
 
-net = LangVisNet(dict_size=len(refer.corpus))
+net = LangVisNet(dict_size=len(refer.corpus),
+                 emb_size=args.emb_size,
+                 hid_size=args.hid_size,
+                 vis_size=args.vis_size,
+                 num_filters=args.num_filters,
+                 mixed_size=args.mixed_size,
+                 hid_mixed_size=args.hid_mixed_size,
+                 lang_layers=args.lang_layers,
+                 mixed_layers=args.mixed_layers,
+                 backend=args.backend,
+                 lstm=args.lstm)
 
 # net = nn.DataParallel(net)
 
