@@ -24,6 +24,25 @@ from referit.refer import mask as cocomask
 from utils.word_utils import Corpus
 
 
+def collate_fn(batch):
+    imgs = []
+    masks = []
+    phrases = []
+    for (img, mask, phrase) in batch:
+        imgs.append(img.squeeze())
+        masks.append(mask)
+        phrases.append(phrase)
+    phrases = sorted(phrases, key=lambda x: x.size(0), reverse=True)
+    max_len = phrases[0].size(0)
+    for i in range(0, len(phrases)):
+        phrase = phrases[i]
+        new_p = phrase.new(max_len + 1).fill_(-1)
+        new_p[:phrase.size(0)] = phrase
+        new_p[-1] = phrase.size(0)
+        phrases[i] = new_p
+    return torch.stack(imgs, 0), torch.stack(masks, 0), torch.stack(phrases)
+
+
 class DatasetNotFoundError(Exception):
     pass
 
@@ -221,7 +240,7 @@ class ReferDataset(data.Dataset):
             img = self.transform(img)
         if self.annotation_transform is not None:
             # mask = mask.unsqueeze(-1)
-            mask = mask.byte() * 255
+            # mask = mask.byte() * 255
             mask = self.annotation_transform(mask)
         phrase = self.tokenize_phrase(phrase)
         return img, mask, phrase
