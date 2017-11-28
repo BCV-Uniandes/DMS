@@ -220,8 +220,7 @@ class ReferDataset(data.Dataset):
         if self.transform is not None:
             img = self.transform(img)
         if self.annotation_transform is not None:
-            # mask = mask.unsqueeze(-1)
-            mask = mask.byte() * 255
+            # mask = mask.byte() * 255
             mask = self.annotation_transform(mask)
         phrase = self.tokenize_phrase(phrase)
         return img, mask, phrase
