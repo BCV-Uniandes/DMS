@@ -102,7 +102,8 @@ parser.add_argument('--backend', default='dpn92', type=str,
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
 parser.add_argument('--high-res', action='store_true',
-                    help='high res version of the output through upsampling+conv')
+                    help='high res version of the output through '
+                         'upsampling + conv')
 parser.add_argument('--upsamp-channels', default=50, type=int,
                     help='number of channels in the upsampling convolutions')
 
@@ -129,14 +130,14 @@ input_transform = Compose([
 ])
 
 # If we are in 'low res' mode, downsample the target
+target_transform = Compose([
+    ToTensor(),
+    ResizeAnnotation(args.size),
+])
+
 if args.high_res:
     target_transform = Compose([
         ToTensor()
-    ])
-else:
-    target_transform = Compose([
-        ToTensor(),
-        ResizeAnnotation(args.size),
     ])
 
 if args.batch_size == 1:

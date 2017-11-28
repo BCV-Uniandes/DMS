@@ -5,12 +5,12 @@ Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
 """
 
 import torch
+import numpy as np
 from sru import SRU
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from .dpn.model_factory import create_model
-import numpy as np
 
 
 class LangVisNet(nn.Module):
@@ -142,7 +142,7 @@ class LangVisNet(nn.Module):
         return output
 
 class UpsamplingModule(nn.Module):
-    def __init__(self, in_channels, upsampling_channels, 
+    def __init__(self, in_channels, upsampling_channels,
                  amplification=32, non_linearity=False):
         super().__init__()
         self.intermediate_modules = np.log2(amplification) - 2
@@ -158,7 +158,7 @@ class UpsamplingModule(nn.Module):
 
         self.intermediate_convs = nn.ModuleList([
             self._make_conv() for _ in range(self.intermediate_modules)])
-        
+
         self.final_conv = nn.Sequential(self.up,
                                         nn.Conv2d(in_channels=upsampling_channels,
                                                   out_channels=1,
@@ -185,7 +185,7 @@ class UpsamplingModule(nn.Module):
             x = intermediate_conv(x)
 
         # Apply final convolution
-        x = self.final_conv(x)      
+        x = self.final_conv(x)
 
         return x
 
