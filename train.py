@@ -27,7 +27,7 @@ from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
-from utils.transforms import ResizeImage
+from utils.transforms import ResizeImage, ResizeAnnotation
 
 
 parser = argparse.ArgumentParser(
@@ -77,7 +77,7 @@ parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 
 # Model settings
-parser.add_argument('--size', default=1024, type=int,
+parser.add_argument('--size', default=512, type=int,
                     help='image size')
 parser.add_argument('--time', default=-1, type=int,
                     help='maximum time steps per batch')
@@ -101,6 +101,10 @@ parser.add_argument('--backend', default='dpn92', type=str,
                     help='default backend network to LangVisNet')
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
+parser.add_argument('--high-res', action='store_true',
+                    help='high res version of the output through upsampling+conv')
+parser.add_argument('--upsamp-channels', default=50, type=int,
+                    help='number of channels in the upsampling convolutions')
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -124,11 +128,16 @@ input_transform = Compose([
         std=[0.229, 0.224, 0.225])
 ])
 
-# target_transform = Compose([
-#     ToNumpy(),
-#     ResizePad(image_size),
-#     ToTensor()
-# ])
+# If we are in 'low res' mode, downsample the target
+if args.high_res:
+    target_transform = Compose([
+        ToTensor()
+    ])
+else:
+    target_transform = Compose([
+        ToTensor(),
+        ResizeAnnotation(args.size),
+    ])
 
 if args.batch_size == 1:
     args.time = -1
@@ -137,7 +146,7 @@ refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     # annotation_transform=target_transform,
+                     annotation_transform=target_transform,
                      max_query_len=args.time)
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
@@ -177,7 +186,9 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  lang_layers=args.lang_layers,
                  mixed_layers=args.mixed_layers,
                  backend=args.backend,
-                 lstm=args.lstm)
+                 lstm=args.lstm,
+                 high_res=args.high_res,
+                 upsampling_channels=args.upsamp_channels)
 
 # net = nn.DataParallel(net)
 
