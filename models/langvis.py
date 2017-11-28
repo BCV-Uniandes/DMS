@@ -149,7 +149,7 @@ class UpsamplingModule(nn.Module):
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
 
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.up = nn.Upsample(scale_factor=2, mode='nearest')
 
         self.first_conv = nn.Sequential(self.up,
                                         nn.Conv2d(in_channels=in_channels,
