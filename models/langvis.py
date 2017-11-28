@@ -149,41 +149,42 @@ class UpsamplingModule(nn.Module):
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
 
-        self.first_conv = nn.Conv2d(in_channels=in_channels,
-                                    out_channels=upsampling_channels,
-                                    kernel_size=1)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+
+        self.first_conv = nn.Sequential(self.up,
+                                        nn.Conv2d(in_channels=in_channels,
+                                                  out_channels=upsampling_channels,
+                                                  kernel_size=1))
 
         self.intermediate_convs = nn.ModuleList([
             self._make_conv() for _ in range(self.intermediate_modules)])
         
-        self.final_conv = nn.Conv2d(in_channels=upsampling_channels,
-                                    out_channels=1,
-                                    kernel_size=1)
+        self.final_conv = nn.Sequential(self.up,
+                                        nn.Conv2d(in_channels=upsampling_channels,
+                                                  out_channels=1,
+                                                  kernel_size=1))
 
     def _make_conv(self):
         conv = nn.Conv2d(in_channels=self.upsampling_channels,
                          out_channels=self.upsampling_channels,
                          kernel_size=1)
+
         if self.non_linearity:
-            conv = nn.Sequential(conv, nn.PReLU())
+            conv = nn.Sequential(self.up, conv, nn.PReLU())
+        else:
+            conv = nn.Sequential(self.up, conv)
 
         return conv
 
     def forward(self, x):
         # Apply first convolution
-        new_h, new_w = 2 * x.size(2), 2 * x.size(3)
-        x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
         x = self.first_conv(x)
 
         # Apply intermediate convolutions
         for intermediate_conv in self.intermediate_convs:
-            new_h, new_w = 2 * x.size(2), 2 * x.size(3)
-            x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
             x = intermediate_conv(x)
 
         # Apply final convolution
-        new_h, new_w = 2 * x.size(2), 2 * x.size(3)
-        x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
         x = self.final_conv(x)      
 
         return x
