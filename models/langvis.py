@@ -22,8 +22,12 @@ class LangVisNet(nn.Module):
         super().__init__()
         self.vis_size = vis_size
         self.num_filters = num_filters
-        self.base = create_model(
-            backend, 1, pretrained=pretrained, extra=extra)
+        if backend == 'dpn92':
+            self.base = create_model(
+                backend, 1, pretrained=pretrained, extra=extra)
+        else:
+            self.base = create_model(
+                backend, 1, pretrained=pretrained)
 
         self.emb = nn.Embedding(dict_size, emb_size)
         self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers)
