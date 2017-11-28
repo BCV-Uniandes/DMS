@@ -13,10 +13,17 @@ from torchvision.models.densenet import (
 from torchvision.models.inception import inception_v3
 from torchvision.models.vgg import vgg16 as vgg
 import torchvision.transforms as transforms
+import torch.utils.model_zoo as model_zoo
 from PIL import Image
+
+VGG16_URL = 'https://download.pytorch.org/models/vgg16-397923af.pth'
 
 
 def vgg16(*args, **kwargs):
+    pretrained = False
+    if 'pretrained' in kwargs:
+        pretrained = kwargs['pretrained']
+        kwargs['pretrained'] = False
     base_vgg = vgg(*args, **kwargs)
     conv_fc6 = nn.Conv2d(in_channels=512,
                          out_channels=4096,
@@ -38,7 +45,15 @@ def vgg16(*args, **kwargs):
         fconv_layers += [layer, nn.ReLU(), nn.Dropout(p=0.2)]
     base_vgg = list(base_vgg.children())[:-1]
     base_vgg += fconv_layers
-    return nn.Sequential(*base_vgg)
+    model = nn.Sequential(*base_vgg)
+    if pretrained:
+        state_dict = model.state_dict()
+        pretrained_state = model_zoo.load_url(VGG16_URL)
+        for layer_name in pretrained_state:
+            if layer_name in state_dict:
+                state_dict[layer_name] = pretrained_state[layer_name]
+        model.load_state_dict(state_dict)
+    return model
 
 
 def create_model(model_name, num_classes=1000, pretrained=False, **kwargs):

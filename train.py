@@ -167,15 +167,6 @@ if args.val is not None:
 if not osp.exists(args.save_folder):
     os.makedirs(args.save_folder)
 
-# net = QSegNet(image_size, args.emb_size, args.size // 8,
-#               num_vilstm_layers=args.vilstm_layers,
-#               num_lstm_layers=args.lstm_layers,
-#               psp_size=args.psp_size,
-#               backend=args.backend,
-#               out_features=args.num_features,
-#               dropout=args.dropout,
-#               dict_size=len(refer.corpus),
-#               norm=args.norm)
 
 net = LangVisNet(dict_size=len(refer.corpus),
                  emb_size=args.emb_size,
@@ -191,7 +182,6 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  high_res=args.high_res,
                  upsampling_channels=args.upsamp_channels)
 
-# net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     net.load_state_dict(torch.load(args.snapshot))
