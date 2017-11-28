@@ -42,7 +42,7 @@ parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
                     help='path to weight snapshot file')
 parser.add_argument('--num-workers', default=2, type=int,
                     help='number of workers used in dataloading')
-parser.add_argument('--dataset', default='referit', type=str,
+parser.add_argument('--dataset', default='unc', type=str,
                     help='dataset used to train QSegNet')
 parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
