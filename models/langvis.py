@@ -10,13 +10,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from .dpn.model_factory import create_model
+import numpy as np
 
 
 class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
-                 backend='dpn92', lstm=False, pretrained=True, extra=True):
+                 backend='dpn92', lstm=False, pretrained=True, 
+                 extra=True, high_res=False, upsampling_channels=50):
         super().__init__()
         self.vis_size = vis_size
         self.num_filters = num_filters
@@ -46,6 +48,10 @@ class LangVisNet(nn.Module):
         self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
                                          out_channels=1,
                                          kernel_size=1)
+
+        if high_res:
+            self.output_collapse = UpsamplingModule(in_channels=hid_mixed_size, 
+                                                    upsampling_channels=upsampling_channels)
 
     def forward(self, vis, lang):
         B, C, H, W = vis.size()
@@ -134,3 +140,51 @@ class LangVisNet(nn.Module):
 
         output = self.output_collapse(output)
         return output
+
+class UpsamplingModule(nn.Module):
+    def __init__(self, in_channels, upsampling_channels, 
+                 amplification=32, non_linearity=False):
+        super().__init__()
+        self.intermediate_modules = np.log2(amplification) - 2
+        self.upsampling_channels = upsampling_channels
+        self.non_linearity = non_linearity
+
+        self.first_conv = nn.Conv2d(in_channels=in_channels,
+                                    out_channels=upsampling_channels,
+                                    kernel_size=1)
+
+        self.intermediate_convs = nn.ModuleList([
+            self._make_conv() for _ in range(self.intermediate_modules)])
+        
+        self.final_conv = nn.Conv2d(in_channels=upsampling_channels,
+                                    out_channels=1,
+                                    kernel_size=1)
+
+    def _make_conv(self):
+        conv = nn.Conv2d(in_channels=self.upsampling_channels,
+                         out_channels=self.upsampling_channels,
+                         kernel_size=1)
+        if non_linearity:
+            conv = nn.Sequential(conv, nn.PReLU())
+
+        return conv
+
+    def forward(self, x):
+        # Apply first convolution
+        new_h, new_w = 2 * x.size(2), 2 * x.size(3)
+        x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
+        x = self.first_conv(x)
+
+        # Apply intermediate convolutions
+        for intermediate_conv in self.intermediate_convs:
+            new_h, new_w = 2 * x.size(2), 2 * x.size(3)
+            x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
+            x = intermediate_conv(x)
+
+        # Apply final convolution
+        new_h, new_w = 2 * x.size(2), 2 * x.size(3)
+        x = F.upsample(input=x, size=(new_h, new_w), mode='bilinear')
+        x = self.final_conv(x)      
+
+        return x
+
