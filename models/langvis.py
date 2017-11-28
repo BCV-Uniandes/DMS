@@ -17,7 +17,7 @@ class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
-                 backend='dpn92', lstm=False, pretrained=True, 
+                 backend='dpn92', lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50):
         super().__init__()
         self.vis_size = vis_size

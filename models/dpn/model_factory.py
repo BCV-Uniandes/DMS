@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import torch.nn as nn
+
 import math
 from .dpn_model import dpn68, dpn68b, dpn92, dpn98, dpn131, dpn107
 from torchvision.models.resnet import (
@@ -9,8 +11,34 @@ from torchvision.models.resnet import (
 from torchvision.models.densenet import (
     densenet121, densenet169, densenet161, densenet201)
 from torchvision.models.inception import inception_v3
+from torchvision.models.vgg import vgg16 as vgg
 import torchvision.transforms as transforms
 from PIL import Image
+
+
+def vgg16(*args, **kwargs):
+    base_vgg = vgg(*args, **kwargs)
+    conv_fc6 = nn.Conv2d(in_channels=512,
+                         out_channels=4096,
+                         kernel_size=7,
+                         padding=3)
+
+    conv_fc7 = nn.Conv2d(in_channels=4096,
+                         out_channels=4096,
+                         kernel_size=1,
+                         padding=0)
+
+    conv_fc8 = nn.Conv2d(in_channels=4096,
+                         out_channels=2688,
+                         kernel_size=1,
+                         padding=0)
+
+    fconv_layers = []
+    for layer in (conv_fc6, conv_fc7, conv_fc8):
+        fconv_layers += [layer, nn.ReLU(), nn.Dropout(p=0.2)]
+    base_vgg = list(base_vgg.children())[:-1]
+    base_vgg += fconv_layers
+    return nn.Sequential(*base_vgg)
 
 
 def create_model(model_name, num_classes=1000, pretrained=False, **kwargs):

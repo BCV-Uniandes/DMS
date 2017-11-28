@@ -131,13 +131,13 @@ input_transform = Compose([
 
 # If we are in 'low res' mode, downsample the target
 target_transform = Compose([
-    ToTensor(),
+    # ToTensor(),
     ResizeAnnotation(args.size),
 ])
 
 if args.high_res:
     target_transform = Compose([
-        ToTensor()
+        # ToTensor()
     ])
 
 if args.batch_size == 1:
@@ -248,7 +248,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
-        masks = Variable(masks.float().squeeze())
+        masks = Variable(masks.squeeze())
         words = Variable(words)
 
         if args.cuda:
