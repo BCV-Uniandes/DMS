@@ -149,7 +149,7 @@ class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels,
                  amplification=32, non_linearity=False):
         super().__init__()
-        self.intermediate_modules = np.log2(amplification) - 2
+        self.intermediate_modules = int(np.log2(amplification) - 2)
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
 
