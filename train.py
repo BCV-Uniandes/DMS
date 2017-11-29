@@ -36,6 +36,8 @@ parser = argparse.ArgumentParser(
 # Dataloading-related settings
 parser.add_argument('--data', type=str, default='../referit_data',
                     help='path to ReferIt splits data folder')
+parser.add_argument('--split-root', type=str, default='data',
+                    help='path to dataloader splits data folder')
 parser.add_argument('--save-folder', default='weights/',
                     help='location to save checkpoint models')
 parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
