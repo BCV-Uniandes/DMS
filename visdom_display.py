@@ -203,6 +203,8 @@ def visualization():
         else:
             vis.images(out, env=args.env)
 
+    print('Done')
+
 
 if __name__ == '__main__':
     visualization()
