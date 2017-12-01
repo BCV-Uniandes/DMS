@@ -17,9 +17,9 @@ from torch.autograd import Variable
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import QSegNet
+from models import LangVisNet
 from referit_loader import ReferDataset
-from utils.transforms import ResizePad, CropResize
+from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
 import numpy as np
@@ -54,22 +54,35 @@ parser.add_argument('--no-eval', action='store_true',
 
 
 # Model settings
-parser.add_argument('--size', default=320, type=int,
+parser.add_argument('--size', default=512, type=int,
                     help='image size')
-parser.add_argument('--time', default=20, type=int,
+parser.add_argument('--time', default=-1, type=int,
                     help='maximum time steps per batch')
-parser.add_argument('--emb-size', default=200, type=int,
+parser.add_argument('--emb-size', default=1000, type=int,
                     help='word embedding dimensions')
-parser.add_argument('--backend', default='densenet', type=str,
-                    help='default backend network to initialize PSPNet')
-parser.add_argument('--psp-size', default=1024, type=int,
-                    help='number of input channels to PSPNet')
-parser.add_argument('--num-features', '--features', default=512, type=int,
-                    help='number of PSPNet output channels')
-parser.add_argument('--lstm-layers', default=2, type=int,
-                    help='number of LSTM stacked layers')
-parser.add_argument('--vilstm-layers', default=1, type=int,
-                    help='number of ViLSTM stacked layers')
+parser.add_argument('--hid-size', default=1000, type=int,
+                    help='language model hidden size')
+parser.add_argument('--vis-size', default=2688, type=int,
+                    help='number of visual filters')
+parser.add_argument('--num-filters', default=1, type=int,
+                    help='number of filters to learn')
+parser.add_argument('--mixed-size', default=1000, type=int,
+                    help='number of combined lang/visual features filters')
+parser.add_argument('--hid-mixed-size', default=1005, type=int,
+                    help='multimodal model hidden size')
+parser.add_argument('--lang-layers', default=2, type=int,
+                    help='number of SRU/LSTM stacked layers')
+parser.add_argument('--mixed-layers', default=3, type=int,
+                    help='number of mLSTM/mSRU stacked layers')
+parser.add_argument('--backend', default='dpn92', type=str,
+                    help='default backend network to LangVisNet')
+parser.add_argument('--lstm', action='store_true', default=False,
+                    help='use LSTM units for RNN modules. Default SRU')
+parser.add_argument('--high-res', action='store_true',
+                    help='high res version of the output through '
+                         'upsampling + conv')
+parser.add_argument('--upsamp-channels', default=50, type=int,
+                    help='number of channels in the upsampling convolutions')
 
 args = parser.parse_args()
 
@@ -82,14 +95,24 @@ if args.cuda:
 image_size = (args.size, args.size)
 
 input_transform = Compose([
-    ResizePad(image_size),
     ToTensor(),
+    ResizeImage(args.size),
     Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225])
 ])
 
-target_transform = CropResize()
+target_transform = Compose([
+    # ToTensor(),
+    ResizeAnnotation(args.size),
+])
+
+if args.high_res:
+    target_transform = Compose([
+        # ToTensor()
+    ])
+
+# target_transform = CropResize()
 
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
@@ -100,15 +123,21 @@ refer = ReferDataset(data_root=args.data,
 
 # loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = QSegNet(image_size, args.emb_size, args.size // 8,
-              num_vilstm_layers=args.vilstm_layers,
-              num_lstm_layers=args.lstm_layers,
-              psp_size=args.psp_size,
-              backend=args.backend,
-              out_features=args.num_features,
-              dict_size=len(refer.corpus))
+net = LangVisNet(dict_size=len(refer.corpus),
+                 emb_size=args.emb_size,
+                 hid_size=args.hid_size,
+                 vis_size=args.vis_size,
+                 num_filters=args.num_filters,
+                 mixed_size=args.mixed_size,
+                 hid_mixed_size=args.hid_mixed_size,
+                 lang_layers=args.lang_layers,
+                 mixed_layers=args.mixed_layers,
+                 backend=args.backend,
+                 lstm=args.lstm,
+                 high_res=args.high_res,
+                 upsampling_channels=args.upsamp_channels)
 
-net = nn.DataParallel(net)
+# net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
@@ -158,10 +187,12 @@ def evaluate():
             mask = mask.float().cuda()
         out = net(imgs, words)
         out = F.sigmoid(out)
+        out = F.upsample(out, size=(
+            mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
         # out = out.squeeze().data.cpu().numpy()
-        out = out.squeeze()
+        # out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)
-        out = target_transform(out, (h, w))
+        # out = target_transform(out, (h, w))
 
         inter = torch.zeros(len(score_thresh))
         union = torch.zeros(len(score_thresh))

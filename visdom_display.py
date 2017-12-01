@@ -29,15 +29,15 @@ parser = argparse.ArgumentParser(
     description='Query Segmentation Network visualization routine')
 
 # Dataloading-related settings
-parser.add_argument('--data', type=str, default='/mnt/referit_data',
+parser.add_argument('--data', type=str, default='../referit_data',
                     help='path to ReferIt splits data folder')
-parser.add_argument('--snapshot', default='../referit_iou_densenet_2_45000.pth',
+parser.add_argument('--snapshot', default='weights/qseg_weights.pth',
                     help='path to weight snapshot file')
 parser.add_argument('--num-workers', default=2, type=int,
                     help='number of workers used in dataloading')
-parser.add_argument('--dataset', default='referit', type=str,
+parser.add_argument('--dataset', default='unc', type=str,
                     help='dataset used to train QSegNet')
-parser.add_argument('--split', default='test', type=str,
+parser.add_argument('--split', default='testA', type=str,
                     help='name of the dataset split used to train')
 
 # Training procedure settings
@@ -51,29 +51,43 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 
 # Model settings
-parser.add_argument('--size', default=320, type=int,
+parser.add_argument('--size', default=512, type=int,
                     help='image size')
-parser.add_argument('--time', default=20, type=int,
+parser.add_argument('--time', default=-1, type=int,
                     help='maximum time steps per batch')
-parser.add_argument('--emb-size', default=200, type=int,
+parser.add_argument('--emb-size', default=1000, type=int,
                     help='word embedding dimensions')
-parser.add_argument('--backend', default='densenet', type=str,
-                    help='default backend network to initialize PSPNet')
-parser.add_argument('--psp-size', default=1024, type=int,
-                    help='number of input channels to PSPNet')
-parser.add_argument('--num-features', '--features', default=512, type=int,
-                    help='number of PSPNet output channels')
-parser.add_argument('--lstm-layers', default=2, type=int,
-                    help='number of LSTM stacked layers')
-parser.add_argument('--vilstm-layers', default=1, type=int,
-                    help='number of ViLSTM stacked layers')
-parser.add_argument('--norm', action='store_true',
-                    help='enable language/visual features L2 normalization')
+parser.add_argument('--hid-size', default=1000, type=int,
+                    help='language model hidden size')
+parser.add_argument('--vis-size', default=2688, type=int,
+                    help='number of visual filters')
+parser.add_argument('--num-filters', default=1, type=int,
+                    help='number of filters to learn')
+parser.add_argument('--mixed-size', default=1000, type=int,
+                    help='number of combined lang/visual features filters')
+parser.add_argument('--hid-mixed-size', default=1005, type=int,
+                    help='multimodal model hidden size')
+parser.add_argument('--lang-layers', default=2, type=int,
+                    help='number of SRU/LSTM stacked layers')
+parser.add_argument('--mixed-layers', default=3, type=int,
+                    help='number of mLSTM/mSRU stacked layers')
+parser.add_argument('--backend', default='dpn92', type=str,
+                    help='default backend network to LangVisNet')
+parser.add_argument('--lstm', action='store_true', default=False,
+                    help='use LSTM units for RNN modules. Default SRU')
+parser.add_argument('--high-res', action='store_true',
+                    help='high res version of the output through '
+                         'upsampling + conv')
+parser.add_argument('--upsamp-channels', default=50, type=int,
+                    help='number of channels in the upsampling convolutions')
 
 # Other settings
 parser.add_argument('--visdom', type=str,
                     default='http://visdom.margffoy-tuay.com',
                     help='visdom URL endpoint')
+parser.add_argument('--env', type=str, default='langvis-vis',
+                    help='name of the enviroment used to display'
+                         'results on Visdom')
 parser.add_argument('--num-images', type=int, default=30,
                     help='number of images to display on visdom')
 parser.add_argument('--heatmap', action='store_true', default=False,
@@ -117,16 +131,19 @@ refer = ReferDataset(data_root=args.data,
 
 loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-# net = QSegNet(image_size, args.emb_size, args.size // 8,
-#               num_vilstm_layers=args.vilstm_layers,
-#               num_lstm_layers=args.lstm_layers,
-#               psp_size=args.psp_size,
-#               backend=args.backend,
-#               out_features=args.num_features,
-#               dict_size=len(refer.corpus),
-#               norm=args.norm)
-
-net = LangVisNet(dict_size=len(refer.corpus))
+net = LangVisNet(dict_size=len(refer.corpus),
+                 emb_size=args.emb_size,
+                 hid_size=args.hid_size,
+                 vis_size=args.vis_size,
+                 num_filters=args.num_filters,
+                 mixed_size=args.mixed_size,
+                 hid_mixed_size=args.hid_mixed_size,
+                 lang_layers=args.lang_layers,
+                 mixed_layers=args.mixed_layers,
+                 backend=args.backend,
+                 lstm=args.lstm,
+                 high_res=args.high_res,
+                 upsampling_channels=args.upsamp_channels)
 
 # net = nn.DataParallel(net)
 
@@ -167,9 +184,9 @@ def visualization():
             query = ' '.join(refer.untokenize_word_vector(word))
             text.append('{0}.{1}: {2}'.format(i, j, query))
         text = '<br>'.join(text)
-        vis.text(text)
-        vis.images(imgs.numpy())
-        vis.images(masks.numpy())
+        vis.text(text, env=args.env)
+        vis.images(imgs.numpy(), env=args.env)
+        vis.images(masks.numpy(), env=args.env)
         imgs = Variable(imgs, volatile=True)
         # masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
@@ -182,9 +199,9 @@ def visualization():
         out = F.sigmoid(out)
         out = out.data.cpu().numpy()
         if args.heatmap:
-            vis.heatmap(out.squeeze())
+            vis.heatmap(out.squeeze(), env=args.env)
         else:
-            vis.images(out)
+            vis.images(out, env=args.env)
 
 
 if __name__ == '__main__':
