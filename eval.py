@@ -159,11 +159,11 @@ def evaluate():
     net.train()
     if not args.no_eval:
         net.eval()
-    score_thresh = np.concatenate([[0],
-                                   np.logspace(start=-16, stop=-2, num=10,
-                                               endpoint=True),
-                                   np.arange(start=0.05, stop=0.96,
-                                             step=0.05)]).tolist()
+    score_thresh = np.concatenate([# [0],
+                                   # np.logspace(start=-16, stop=-2, num=10,
+                                   #             endpoint=True),
+                                   np.arange(start=0.00, stop=0.96,
+                                             step=0.025)]).tolist()
     cum_I = torch.zeros(len(score_thresh))
     cum_U = torch.zeros(len(score_thresh))
     eval_seg_iou_list = [.5, .6, .7, .8, .9]
@@ -215,17 +215,20 @@ def evaluate():
 
         seg_total += 1
 
-        if (i != 0 and i % args.log_interval == 0) or (i == len(refer)):
+        if i != 0 and i % args.log_interval == 0:
             temp_cum_iou = cum_I / cum_U
+            _, which = torch.max(temp_cum_iou,0)
+            which = which.numpy()
             print(' ')
             print('Accumulated IoUs at different thresholds:')
-            print('{:15}| {:15} |'.format('Thresholds', 'mIoU'))
-            print('-' * 32)
+            print('+' + '-' * 34 + '+')
+            print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+            print('+' + '-' * 34 + '+')
             for idx, thresh in enumerate(score_thresh):
-                print('{:<15.3E}| {:<15.13f} |'.format(
-                    thresh, temp_cum_iou[idx]))
-            print('-' * 32)
-
+                this_string = '| {:<15.3E}| {:<15.8f} | <--' if idx == which else '| {:<15.3E}| {:<15.8f} |'
+                print(this_string.format(thresh, temp_cum_iou[idx]))
+            print('+' + '-' * 34 + '+')
+            
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
         print('-' * 32)
