@@ -45,7 +45,7 @@ parser.add_argument('--no-cuda', action='store_true',
                     help='Do not use cuda to train model')
 parser.add_argument('--log-interval', type=int, default=1000, metavar='N',
                     help='report interval')
-parser.add_argument('--batch-size', default=3, type=int,
+parser.add_argument('--batch-size', default=1, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
