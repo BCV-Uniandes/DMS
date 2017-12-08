@@ -153,12 +153,12 @@ class UpsamplingModule(nn.Module):
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
 
-        self.up = nn.Upsample(scale_factor=2, mode='nearest')
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.first_conv = nn.Sequential(self.up,
                                         nn.Conv2d(in_channels=in_channels,
                                                   out_channels=upsampling_channels,
-                                                  kernel_size=1))
+                                                  kernel_size=3))
 
         self.intermediate_convs = nn.ModuleList([
             self._make_conv() for _ in range(self.intermediate_modules)])
@@ -166,7 +166,7 @@ class UpsamplingModule(nn.Module):
         self.final_conv = nn.Sequential(self.up,
                                         nn.Conv2d(in_channels=upsampling_channels,
                                                   out_channels=1,
-                                                  kernel_size=1))
+                                                  kernel_size=3))
 
     def _make_conv(self):
         conv = nn.Conv2d(in_channels=self.upsampling_channels,
