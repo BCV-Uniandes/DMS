@@ -18,7 +18,8 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', lstm=False, pretrained=True,
-                 extra=True, high_res=False, upsampling_channels=50):
+                 extra=True, high_res=False, upsampling_channels=50,
+                 upsampling_mode='bilineal', upsampling_size=3):
         super().__init__()
         self.vis_size = vis_size
         self.num_filters = num_filters
@@ -54,8 +55,9 @@ class LangVisNet(nn.Module):
                                          kernel_size=1)
 
         if high_res:
-            self.output_collapse = UpsamplingModule(in_channels=hid_mixed_size, 
-                                                    upsampling_channels=upsampling_channels)
+            self.output_collapse = UpsamplingModule(
+                in_channels=hid_mixed_size,
+                upsampling_channels=upsampling_channels)
 
     def forward(self, vis, lang):
         B, C, H, W = vis.size()
@@ -156,17 +158,19 @@ class UpsamplingModule(nn.Module):
         self.up = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.first_conv = nn.Sequential(self.up,
-                                        nn.Conv2d(in_channels=in_channels,
-                                                  out_channels=upsampling_channels,
-                                                  kernel_size=3))
+                                        nn.Conv2d(
+                                            in_channels=in_channels,
+                                            out_channels=upsampling_channels,
+                                            kernel_size=3))
 
         self.intermediate_convs = nn.ModuleList([
             self._make_conv() for _ in range(self.intermediate_modules)])
 
         self.final_conv = nn.Sequential(self.up,
-                                        nn.Conv2d(in_channels=upsampling_channels,
-                                                  out_channels=1,
-                                                  kernel_size=3))
+                                        nn.Conv2d(
+                                            in_channels=upsampling_channels,
+                                            out_channels=1,
+                                            kernel_size=3))
 
     def _make_conv(self):
         conv = nn.Conv2d(in_channels=self.upsampling_channels,

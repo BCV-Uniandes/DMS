@@ -80,6 +80,10 @@ parser.add_argument('--high-res', action='store_true',
                          'upsampling + conv')
 parser.add_argument('--upsamp-channels', default=50, type=int,
                     help='number of channels in the upsampling convolutions')
+parser.add_argument('--upsamp-mode', default='bilinear', type=str,
+                    help='upsampling interpolation mode')
+parser.add_argument('--upsamp-size', default=3, type=int,
+                    help='upsampling convolution kernel size')
 
 # Other settings
 parser.add_argument('--visdom', type=str,
@@ -143,7 +147,9 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  backend=args.backend,
                  lstm=args.lstm,
                  high_res=args.high_res,
-                 upsampling_channels=args.upsamp_channels)
+                 upsampling_channels=args.upsamp_channels,
+                 upsampling_mode=args.upsamp_mode,
+                 upsampling_size=args.upsamp_size)
 
 # net = nn.DataParallel(net)
 
