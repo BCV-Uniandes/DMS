@@ -57,7 +57,9 @@ class LangVisNet(nn.Module):
         if high_res:
             self.output_collapse = UpsamplingModule(
                 in_channels=hid_mixed_size,
-                upsampling_channels=upsampling_channels)
+                upsampling_channels=upsampling_channels,
+                mode=upsampling_mode,
+                ker_size=upsampling_size)
 
     def forward(self, vis, lang):
         B, C, H, W = vis.size()
@@ -149,19 +151,21 @@ class LangVisNet(nn.Module):
 
 class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels,
+                 mode='bilineal', ker_size=3,
                  amplification=32, non_linearity=False):
         super().__init__()
+        self.ker_size = ker_size
         self.intermediate_modules = int(np.log2(amplification) - 2)
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
 
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.up = nn.Upsample(scale_factor=2, mode=mode)
 
         self.first_conv = nn.Sequential(self.up,
                                         nn.Conv2d(
                                             in_channels=in_channels,
                                             out_channels=upsampling_channels,
-                                            kernel_size=3))
+                                            kernel_size=self.ker_size))
 
         self.intermediate_convs = nn.ModuleList([
             self._make_conv() for _ in range(self.intermediate_modules)])
@@ -170,12 +174,12 @@ class UpsamplingModule(nn.Module):
                                         nn.Conv2d(
                                             in_channels=upsampling_channels,
                                             out_channels=1,
-                                            kernel_size=3))
+                                            kernel_size=self.ker_size))
 
     def _make_conv(self):
         conv = nn.Conv2d(in_channels=self.upsampling_channels,
                          out_channels=self.upsampling_channels,
-                         kernel_size=1)
+                         kernel_size=self.ker_size)
 
         if self.non_linearity:
             conv = nn.Sequential(self.up, conv, nn.PReLU())
