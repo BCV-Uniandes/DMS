@@ -20,7 +20,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 # Local imports
 from models import LangVisNet
 from referit_loader import ReferDataset
-from utils.transforms import ResizeImage
+from utils.transforms import ResizeImage, ResizePad
 
 # Other imports
 from visdom import Visdom
@@ -125,6 +125,8 @@ target_transform = Compose([
     # ToTensor(),
     ResizeImage(args.size),
 ])
+
+display_transform = ResizePad((args.size, args.size))
 
 refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,

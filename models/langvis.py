@@ -149,6 +149,15 @@ class LangVisNet(nn.Module):
         output = self.output_collapse(output)
         return output
 
+    def load_state_dict(self, new_state):
+        state = self.state_dict()
+        for layer in state:
+            if layer in new_state:
+                if state[layer].size() == new_state[layer].size():
+                    state[layer] = new_state[layer]
+        super().load_state_dict(state)
+
+
 class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels,
                  mode='bilineal', ker_size=3,
@@ -200,4 +209,3 @@ class UpsamplingModule(nn.Module):
         x = self.final_conv(x)
 
         return x
-
