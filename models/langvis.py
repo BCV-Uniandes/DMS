@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Query-based Scene Segmentation (QSegNet) Network PyTorch implementation.
+Language and Vision (LangVisNet) Network PyTorch implementation.
 """
 
 import torch
@@ -17,7 +17,7 @@ class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
-                 backend='dpn92', lstm=False, pretrained=True,
+                 backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3):
         super().__init__()
@@ -36,8 +36,10 @@ class LangVisNet(nn.Module):
             self.lang_model = nn.LSTM(
                 emb_size, hid_size, num_layers=lang_layers)
 
+        self.mix_we = mix_we
+        lineal_in = hid_size + emb_size * int(mix_we)
         self.adaptative_filter = nn.Linear(
-            in_features=hid_size, out_features=(num_filters * (vis_size + 2)))
+            in_features=lineal_in, out_features=(num_filters * (vis_size + 2)))
 
         self.comb_conv = nn.Conv2d(in_channels=(2 + emb_size + hid_size +
                                                 vis_size + num_filters),
@@ -66,18 +68,28 @@ class LangVisNet(nn.Module):
         vis = self.base(vis)
 
         # LxE ?
+        linear_in = []
         lang_mix = []
         lang = self.emb(lang)
         lang = torch.transpose(lang, 0, 1)
+        if self.mix_we:
+            linear_in.append(lang.squeeze())
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
         # input has dimensions: seq_length x batch_size (1) x we_dim
         lang, _ = self.lang_model(lang)
+        # Lx1xH
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
+
+        if self.mix_we:
+            linear_in.append(lang.squeeze)
+            linear_in = torch.cat(linear_in, dim=1)
+        else:
+            linear_in = lang
 
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=2)
@@ -93,7 +105,7 @@ class LangVisNet(nn.Module):
         vis = torch.cat([vis, x, y], dim=1)
 
         # Size: HxL?
-        lang = lang.squeeze()
+        linear_in = linear_in.squeeze()
         filters = self.adaptative_filter(lang)
         filters = F.sigmoid(filters)
         # LxFx(N+2)x1x1
@@ -113,6 +125,7 @@ class LangVisNet(nn.Module):
         q = torch.cat([vis, lang_mix, p], dim=2)
         # Lx1xSxH/32xW/32
         # print(mixed.size())
+
         q = self.comb_conv(q.squeeze(1))
         q = q.unsqueeze(1)
         # q = []
