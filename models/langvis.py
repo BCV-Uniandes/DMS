@@ -86,7 +86,7 @@ class LangVisNet(nn.Module):
             vis.size(-2), vis.size(-1)))
 
         if self.mix_we:
-            linear_in.append(lang.squeeze)
+            linear_in.append(lang.squeeze())
             linear_in = torch.cat(linear_in, dim=1)
         else:
             linear_in = lang
