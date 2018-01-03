@@ -106,10 +106,10 @@ class LangVisNet(nn.Module):
 
         # Size: HxL?
         linear_in = linear_in.squeeze()
-        if self.mix_we:
-            filters = self.adaptative_filter(linear_in)
-        else:
-            filters = self.adaptative_filter(lang)
+        # if self.mix_we:
+        filters = self.adaptative_filter(linear_in)
+        # else:
+            # filters = self.adaptative_filter(lang)
         filters = F.sigmoid(filters)
         # LxFx(N+2)x1x1
         filters = filters.view(
