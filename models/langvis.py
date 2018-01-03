@@ -39,9 +39,9 @@ class LangVisNet(nn.Module):
         self.mix_we = mix_we
         lineal_in = hid_size + emb_size * int(mix_we)
         self.adaptative_filter = nn.Linear(
-            in_features=lineal_in, out_features=(num_filters * (vis_size + 2)))
+            in_features=lineal_in, out_features=(num_filters * (vis_size + 8)))
 
-        self.comb_conv = nn.Conv2d(in_channels=(2 + emb_size + hid_size +
+        self.comb_conv = nn.Conv2d(in_channels=(8 + emb_size + hid_size +
                                                 vis_size + num_filters),
                                    out_channels=mixed_size,
                                    kernel_size=1,
@@ -64,8 +64,14 @@ class LangVisNet(nn.Module):
                 ker_size=upsampling_size)
 
     def forward(self, vis, lang):
-        B, C, H, W = vis.size()
+        # Run image through base FCN
         vis = self.base(vis)
+
+        # Generate channels of 'x' and 'y' info
+        B, C, H, W = vis.size()
+        spatial = self.generate_spatial_batch(H, W)
+        # (N + 8)xH/32xW/32
+        vis = torch.cat([vis, spatial], dim=1)
 
         # LxE ?
         linear_in = []
@@ -94,15 +100,12 @@ class LangVisNet(nn.Module):
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=2)
 
-        out_h, out_w = vis.size(2), vis.size(3)
-        x = Variable(torch.linspace(start=-1, end=1, steps=out_w).cuda())
-        x = x.unsqueeze(0).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
+        # x = Variable(torch.linspace(start=-1, end=1, steps=out_w).cuda())
+        # x = x.unsqueeze(0).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
 
-        y = Variable(torch.linspace(start=-1, end=1, steps=out_h).cuda())
-        y = y.unsqueeze(1).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
-
-        # (N + 2)xH/32xW/32
-        vis = torch.cat([vis, x, y], dim=1)
+        # y = Variable(torch.linspace(start=-1, end=1, steps=out_h).cuda())
+        # y = y.unsqueeze(1).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
+        
 
         # Size: HxL?
         linear_in = linear_in.squeeze()
@@ -113,7 +116,7 @@ class LangVisNet(nn.Module):
         filters = F.sigmoid(filters)
         # LxFx(N+2)x1x1
         filters = filters.view(
-            time_steps, self.num_filters, self.vis_size + 2, 1, 1)
+            time_steps, self.num_filters, self.vis_size + 8, 1, 1)
         p = []
         for t in range(time_steps):
             filter = filters[t]
@@ -142,9 +145,6 @@ class LangVisNet(nn.Module):
                    q.size(3) * q.size(4))
         # Lx1xMx(H*W/(32*32))
         q = q.permute(3, 0, 1, 2).contiguous()
-        # q = torch.transpose(q, 3, 0)
-        # q = torch.transpose(q, 3, 1)
-        # q = torch.transpose(q, 3, 2).contiguous()
         # (H*W/(32*32))xLx1xM
         q = q.view(q.size(0) * q.size(1), q.size(2), q.size(3))
         # L*(H*W/(32*32))x1xM
@@ -154,13 +154,13 @@ class LangVisNet(nn.Module):
 
         """
         Take all the hidden states (one for each pixel of every
-        'length of the sequence') but keep only the last out_h * out_w
+        'length of the sequence') but keep only the last H * W
         so that it can be reshaped to an image of such size
         """
-        output = output[-(out_h * out_w):, :, :]
+        output = output[-(H * W):, :, :]
         output = output.permute(1, 2, 0).contiguous()
         output = output.view(output.size(0), output.size(1),
-                             out_h, out_w)
+                             H, W)
 
         output = self.output_collapse(output)
         return output
@@ -172,6 +172,25 @@ class LangVisNet(nn.Module):
                 if state[layer].size() == new_state[layer].size():
                     state[layer] = new_state[layer]
         super().load_state_dict(state)
+
+    def generate_spatial_batch(self, featmap_H, featmap_W):
+        """
+        Function taken from 
+        https://github.com/chenxi116/TF-phrasecut-public/blob/master/util/processing_tools.py#L5
+        and slightly modified
+        """
+        spatial_batch_val = np.zeros((1, 8, featmap_H, featmap_W), dtype=np.float32)
+        for h in range(featmap_H):
+            for w in range(featmap_W):
+                xmin = w / featmap_W * 2 - 1
+                xmax = (w+1) / featmap_W * 2 - 1
+                xctr = (xmin+xmax) / 2
+                ymin = h / featmap_H * 2 - 1
+                ymax = (h+1) / featmap_H * 2 - 1
+                yctr = (ymin+ymax) / 2
+                spatial_batch_val[0, :, h, w] = \
+                    [xmin, ymin, xmax, ymax, xctr, yctr, 1/featmap_W, 1/featmap_H]
+        return Variable(torch.from_numpy(spatial_batch_val)).cuda()
 
 
 class UpsamplingModule(nn.Module):
