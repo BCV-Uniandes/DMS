@@ -297,7 +297,7 @@ def train(epoch):
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
                       elapsed_time * 1000, total_loss.avg,
-                      scheduler.best))
+                      optimizer.param_groups[0]['lr']))
             total_loss.reset()
 
         # total_loss = 0
