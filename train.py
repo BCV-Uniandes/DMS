@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from torch import optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
@@ -64,8 +64,8 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate')
-parser.add_argument('--milestones', default='10,20,30', type=str,
-                    help='milestones (epochs) for LR decreasing')
+parser.add_argument('--patience', default=2, type=int,
+                    help='patience epochs for LR decreasing')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--iou-loss', action='store_true',
@@ -226,8 +226,8 @@ if args.visdom is not None:
 
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
-scheduler = MultiStepLR(
-    optimizer, milestones=[int(x) for x in args.milestones.split(',')])
+scheduler = ReduceLROnPlateau(
+    optimizer, patience=args.patience)
 
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
@@ -351,11 +351,11 @@ if __name__ == '__main__':
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
-            scheduler.step()
             train_loss = train(epoch)
             val_loss = train_loss
             if args.val is not None:
                 val_loss = validate(epoch)
+            scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
                   '| epoch loss {:.6f} |'.format(
