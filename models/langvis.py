@@ -73,7 +73,7 @@ class LangVisNet(nn.Module):
         lang = self.emb(lang)
         lang = torch.transpose(lang, 0, 1)
         if self.mix_we:
-            linear_in.append(lang.squeeze())
+            linear_in.append(lang.squeeze(dim=1))
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
@@ -86,7 +86,7 @@ class LangVisNet(nn.Module):
             vis.size(-2), vis.size(-1)))
 
         if self.mix_we:
-            linear_in.append(lang.squeeze())
+            linear_in.append(lang.squeeze(dim=1))
             linear_in = torch.cat(linear_in, dim=1)
         else:
             linear_in = lang
@@ -106,7 +106,10 @@ class LangVisNet(nn.Module):
 
         # Size: HxL?
         linear_in = linear_in.squeeze()
-        filters = self.adaptative_filter(lang)
+        if self.mix_we:
+            filters = self.adaptative_filter(linear_in)
+        else:
+            filters = self.adaptative_filter(lang)
         filters = F.sigmoid(filters)
         # LxFx(N+2)x1x1
         filters = filters.view(

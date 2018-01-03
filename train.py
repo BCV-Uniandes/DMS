@@ -101,7 +101,7 @@ parser.add_argument('--mixed-layers', default=3, type=int,
                     help='number of mLSTM/mSRU stacked layers')
 parser.add_argument('--backend', default='dpn92', type=str,
                     help='default backend network to LangVisNet')
-parser.add_argument('--mix-we', action='store_true',
+parser.add_argument('--mix-we', action='store_true', default=False,
                     help='train linear layer filters based also on WE')
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
