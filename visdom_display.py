@@ -73,6 +73,8 @@ parser.add_argument('--mixed-layers', default=3, type=int,
                     help='number of mLSTM/mSRU stacked layers')
 parser.add_argument('--backend', default='dpn92', type=str,
                     help='default backend network to LangVisNet')
+parser.add_argument('--mix-we', action='store_true', default=False,
+                    help='train linear layer filters based also on WE')
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
 parser.add_argument('--high-res', action='store_true',
@@ -147,6 +149,7 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  lang_layers=args.lang_layers,
                  mixed_layers=args.mixed_layers,
                  backend=args.backend,
+                 mix_we=args.mix_we,
                  lstm=args.lstm,
                  high_res=args.high_res,
                  upsampling_channels=args.upsamp_channels,
