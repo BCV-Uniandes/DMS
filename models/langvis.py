@@ -105,7 +105,6 @@ class LangVisNet(nn.Module):
 
         # y = Variable(torch.linspace(start=-1, end=1, steps=out_h).cuda())
         # y = y.unsqueeze(1).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
-        
 
         # Size: HxL?
         linear_in = linear_in.squeeze()

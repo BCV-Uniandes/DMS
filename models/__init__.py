@@ -11,3 +11,5 @@
 from .langvis import LangVisNet
 
 LangVisNet
+
+VERSION_INFO = (0, 1, 0, 'dev0')
