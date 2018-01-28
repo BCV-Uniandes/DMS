@@ -260,6 +260,11 @@ def train(epoch):
             masks = masks.cuda()
             words = words.cuda()
 
+        if args.cuda and args.gpu_pair is not None:
+            imgs = imgs.cuda(2*args.gpu_pair)
+            masks = masks.cuda(2*args.gpu_pair)
+            words = words.cuda(2*args.gpu_pair)
+
         optimizer.zero_grad()
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
