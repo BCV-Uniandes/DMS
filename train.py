@@ -77,6 +77,8 @@ parser.add_argument('--optim-snapshot', type=str,
                     help='path to optimizer state snapshot')
 parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
+parser.add_argument('--gpu-pair', type=int, default=None,
+                    help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -191,7 +193,8 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  high_res=args.high_res,
                  upsampling_channels=args.upsamp_channels,
                  upsampling_mode=args.upsamp_mode,
-                 upsampling_size=args.upsamp_size)
+                 upsampling_size=args.upsamp_size,
+                 gpu_pair=args.gpu_pair)
 
 
 if osp.exists(args.snapshot):

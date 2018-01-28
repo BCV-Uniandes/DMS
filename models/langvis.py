@@ -19,7 +19,7 @@ class LangVisNet(nn.Module):
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
-                 upsampling_mode='bilineal', upsampling_size=3):
+                 upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None):
         super().__init__()
         self.vis_size = vis_size
         self.num_filters = num_filters
@@ -63,20 +63,47 @@ class LangVisNet(nn.Module):
                 mode=upsampling_mode,
                 ker_size=upsampling_size)
 
+        self.gpu_pair = gpu_pair
+        if gpu_pair is not None:
+            # First GPU
+            first_gpu = int(2*gpu_pair) # 0 if gpu_pair == 0 and 2 if gpu_pair == 1
+            self.base.cuda(first_gpu)
+            self.emb.cuda(first_gpu)
+            self.lang_model.cuda(first_gpu)
+            self.adaptative_filter.cuda(first_gpu)
+            self.comb_conv.cuda(first_gpu)
+            # Second GPU
+            second_gpu = first_gpu + 1 # 1 if gpu_pair == 0 and 3 if gpu_pair == 1
+            self.mrnn.cuda(second_gpu)
+            self.output_collapse.cuda(second_gpu)
+            # Assign for use in forward
+            self.first_gpu = first_gpu
+            self.second_gpu = second_gpu
+
+
+
     def forward(self, vis, lang):
         # Run image through base FCN
         vis = self.base(vis)
+        if gpu_pair is not None:
+            vis = vis.cuda(self.first_gpu)
 
         # Generate channels of 'x' and 'y' info
         B, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
+        if gpu_pair is not None:
+            spatial = spatial.cuda(self.first_gpu)
         # (N + 8)xH/32xW/32
         vis = torch.cat([vis, spatial], dim=1)
+        if gpu_pair is not None:
+            vis = vis.cuda(self.first_gpu)
 
         # LxE ?
         linear_in = []
         lang_mix = []
         lang = self.emb(lang)
+        if gpu_pair is not None:
+            lang = lang.cuda(self.first_gpu)
         lang = torch.transpose(lang, 0, 1)
         if self.mix_we:
             linear_in.append(lang.squeeze(dim=1))
@@ -90,6 +117,8 @@ class LangVisNet(nn.Module):
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
             lang.size(0), lang.size(1), lang.size(2),
             vis.size(-2), vis.size(-1)))
+        if gpu_pair is not None:
+            lang_mix = lang_mix.cuda(self.first_gpu)
 
         if self.mix_we:
             linear_in.append(lang.squeeze(dim=1))
@@ -99,12 +128,6 @@ class LangVisNet(nn.Module):
 
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=2)
-
-        # x = Variable(torch.linspace(start=-1, end=1, steps=out_w).cuda())
-        # x = x.unsqueeze(0).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
-
-        # y = Variable(torch.linspace(start=-1, end=1, steps=out_h).cuda())
-        # y = y.unsqueeze(1).expand(out_h, out_w).unsqueeze(0).unsqueeze(0)
 
         # Size: HxL?
         linear_in = linear_in.squeeze()
@@ -128,6 +151,8 @@ class LangVisNet(nn.Module):
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
         # Lx(N + F + H + E + 2)xH/32xW/32
         q = torch.cat([vis, lang_mix, p], dim=2)
+        if gpu_pair is not None:
+            q = q.cuda(self.second_gpu)
         # Lx1xSxH/32xW/32
         # print(mixed.size())
 
