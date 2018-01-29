@@ -66,9 +66,9 @@ class LangVisNet(nn.Module):
         self.gpu_pair = gpu_pair
         if gpu_pair is not None:
             # Define GPUs
-            first_gpu = int(2*gpu_pair) # 0 if gpu_pair == 0 and 2 if gpu_pair == 1
+            first_gpu = int(2*gpu_pair) # 0 if gpu_pair == 0 and 2 if gpu_pair == 1
             second_gpu = first_gpu + 1 # 1 if gpu_pair == 0 and 3 if gpu_pair == 1
-            # Assign for use in forward
+            # Assign for use in forward
             self.first_gpu = first_gpu
             self.second_gpu = second_gpu
             # First GPU
@@ -77,8 +77,8 @@ class LangVisNet(nn.Module):
             self.lang_model.cuda(self.first_gpu)
             self.adaptative_filter.cuda(self.first_gpu)
             self.comb_conv.cuda(self.first_gpu)
-            # Second GPU
-            # self.mrnn.cuda(self.second_gpu)
+            # Second GPU
+            self.mrnn.cuda(self.second_gpu)
             self.output_collapse.cuda(self.second_gpu)
 
 
@@ -201,7 +201,7 @@ class LangVisNet(nn.Module):
 
     def generate_spatial_batch(self, featmap_H, featmap_W):
         """
-        Function taken from 
+        Function taken from
         https://github.com/chenxi116/TF-phrasecut-public/blob/master/util/processing_tools.py#L5
         and slightly modified
         """
