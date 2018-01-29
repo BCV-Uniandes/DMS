@@ -200,8 +200,8 @@ net = LangVisNet(dict_size=len(refer.corpus),
 if osp.exists(args.snapshot):
     net.load_state_dict(torch.load(args.snapshot))
 
-if args.cuda:
-    net.cuda()
+# if args.cuda:
+    # net.cuda()
 
 if args.visdom is not None:
     visdom_url = urlparse(args.visdom)
@@ -238,7 +238,7 @@ if osp.exists(args.optim_snapshot):
 
 scheduler.step(args.start_epoch)
 
-criterion = nn.BCEWithLogitsLoss()
+criterion = nn.BCEWithLogitsLoss().cuda()
 if args.iou_loss:
     criterion = IoULoss()
 
@@ -272,6 +272,8 @@ def train(epoch):
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
         loss = criterion(out_masks, masks)
+        print(type(loss))
+        print(loss.data.shape)
         loss.backward()
         optimizer.step()
 

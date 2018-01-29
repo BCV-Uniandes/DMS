@@ -78,7 +78,7 @@ class LangVisNet(nn.Module):
             self.adaptative_filter.cuda(self.first_gpu)
             self.comb_conv.cuda(self.first_gpu)
             # Second GPU
-            self.mrnn.cuda(self.second_gpu)
+            # self.mrnn.cuda(self.second_gpu)
             self.output_collapse.cuda(self.second_gpu)
 
 
@@ -173,6 +173,7 @@ class LangVisNet(nn.Module):
         # L*(H*W/(32*32))x1xM
         if self.gpu_pair is not None:
             q = q.cuda(self.second_gpu)
+            print('first_gpu',self.second_gpu)
             self.mrnn.cuda(self.second_gpu)
         # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.mrnn(q)
