@@ -272,8 +272,6 @@ def train(epoch):
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
         loss = criterion(out_masks, masks)
-        print(type(loss))
-        print(loss.data.shape)
         loss.backward()
         optimizer.step()
 

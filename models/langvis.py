@@ -173,7 +173,6 @@ class LangVisNet(nn.Module):
         # L*(H*W/(32*32))x1xM
         if self.gpu_pair is not None:
             q = q.cuda(self.second_gpu)
-            print('first_gpu',self.second_gpu)
             self.mrnn.cuda(self.second_gpu)
         # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.mrnn(q)
