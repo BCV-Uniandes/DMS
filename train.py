@@ -338,6 +338,8 @@ def validate(epoch):
             words = words.cuda()
 
         out_masks = net(imgs, words)
+        out_masks = F.upsample(out_masks, size=(
+            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         loss = criterion(out_masks, masks)
         epoch_total_loss.update(loss.data[0], imgs.size(0))
 
