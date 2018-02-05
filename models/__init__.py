@@ -8,8 +8,9 @@
 
 """PyTorch models."""
 
-from .langvis import LangVisNet
+from .langvis import LangVisNet, LangVisUpsample
 
 LangVisNet
+LangVisUpsample
 
 VERSION_INFO = (0, 1, 0, 'dev0')

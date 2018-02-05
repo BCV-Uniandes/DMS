@@ -22,11 +22,11 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import LangVisNet
 from utils import AverageMeter
 from utils.losses import IoULoss
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
+from models import LangVisNet, LangVisUpsample
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 
@@ -75,6 +75,8 @@ parser.add_argument('--start-epoch', type=int, default=1,
 parser.add_argument('--optim-snapshot', type=str,
                     default='weights/qsegnet_optim.pth',
                     help='path to optimizer state snapshot')
+parser.add_argument('--old-weights', action='store_true', default=False,
+                    help='load LangVisNet weights on a LangVisUpsample module')
 parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 parser.add_argument('--gpu-pair', type=int, default=None,
@@ -116,6 +118,11 @@ parser.add_argument('--upsamp-mode', default='bilinear', type=str,
                     help='upsampling interpolation mode')
 parser.add_argument('--upsamp-size', default=3, type=int,
                     help='upsampling convolution kernel size')
+parser.add_argument('--upsamp-amplification', default=32, type=int,
+                    help='upsampling scale factor')
+parser.add_argument('--langvis-freeze', action='store_true', default=False,
+                    help='freeze low res model and train only '
+                         'upsampling layers')
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -196,9 +203,16 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  upsampling_size=args.upsamp_size,
                  gpu_pair=args.gpu_pair)
 
+snapshot_dict = torch.load(args.snapshot)
+
+if args.old_weights:
+    state = {}
+    for weight_name in snapshot_dict.keys():
+        state['langvis.' + weight_name] = snapshot_dict[weight_name]
+    snapshot_dict = state
 
 if osp.exists(args.snapshot):
-    net.load_state_dict(torch.load(args.snapshot))
+    net.load_state_dict(snapshot_dict)
 
 if args.cuda:
     net.cuda()

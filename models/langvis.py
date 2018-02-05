@@ -18,9 +18,9 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, high_res=False, upsampling_channels=50,
-                 upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None):
+                 extra=True, gpu_pair=None, high_res=False):
         super().__init__()
+        self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
         if backend == 'dpn92':
@@ -52,16 +52,11 @@ class LangVisNet(nn.Module):
         if lstm:
             self.mrnn = nn.LSTM(mixed_size, hid_mixed_size,
                                 num_layers=mixed_layers)
-        self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
-                                         out_channels=1,
-                                         kernel_size=1)
 
-        if high_res:
-            self.output_collapse = UpsamplingModule(
-                in_channels=hid_mixed_size,
-                upsampling_channels=upsampling_channels,
-                mode=upsampling_mode,
-                ker_size=upsampling_size)
+        if not self.high_res:
+            self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
+                                             out_channels=1,
+                                             kernel_size=1)
 
         self.gpu_pair = gpu_pair
         if gpu_pair is not None:
@@ -79,9 +74,8 @@ class LangVisNet(nn.Module):
             self.comb_conv.cuda(self.first_gpu)
             # Second GPU
             self.mrnn.cuda(self.second_gpu)
-            self.output_collapse.cuda(self.second_gpu)
-
-
+            if not self.high_res:
+                self.output_collapse.cuda(self.second_gpu)
 
     def forward(self, vis, lang):
         # Run image through base FCN
@@ -186,9 +180,10 @@ class LangVisNet(nn.Module):
         output = output.permute(1, 2, 0).contiguous()
         output = output.view(output.size(0), output.size(1),
                              H, W)
-        if self.gpu_pair is not None:
-            self.output_collapse.cuda(self.second_gpu)
-        output = self.output_collapse(output)
+        if not self.high_res:
+            if self.gpu_pair is not None:
+                self.output_collapse.cuda(self.second_gpu)
+            output = self.output_collapse(output)
         return output
 
     def load_state_dict(self, new_state):
@@ -209,46 +204,40 @@ class LangVisNet(nn.Module):
         for h in range(featmap_H):
             for w in range(featmap_W):
                 xmin = w / featmap_W * 2 - 1
-                xmax = (w+1) / featmap_W * 2 - 1
-                xctr = (xmin+xmax) / 2
+                xmax = (w + 1) / featmap_W * 2 - 1
+                xctr = (xmin + xmax) / 2
                 ymin = h / featmap_H * 2 - 1
-                ymax = (h+1) / featmap_H * 2 - 1
-                yctr = (ymin+ymax) / 2
-                spatial_batch_val[0, :, h, w] = \
-                    [xmin, ymin, xmax, ymax, xctr, yctr, 1/featmap_W, 1/featmap_H]
+                ymax = (h + 1) / featmap_H * 2 - 1
+                yctr = (ymin + ymax) / 2
+                spatial_batch_val[0, :, h, w] = (
+                    [xmin, ymin, xmax, ymax,
+                     xctr, yctr, 1 / featmap_W, 1 / featmap_H])
         return Variable(torch.from_numpy(spatial_batch_val)).cuda()
 
 
 class UpsamplingModule(nn.Module):
-    def __init__(self, in_channels, upsampling_channels,
+    def __init__(self, in_channels, upsampling_channels=1,
                  mode='bilineal', ker_size=3,
                  amplification=32, non_linearity=False):
         super().__init__()
         self.ker_size = ker_size
-        self.intermediate_modules = int(np.log2(amplification) - 2)
+        self.intermediate_modules = int(np.log2(amplification))
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
+        self.in_channels = in_channels
 
         self.up = nn.Upsample(scale_factor=2, mode=mode)
 
-        self.first_conv = nn.Sequential(self.up,
-                                        nn.Conv2d(
-                                            in_channels=in_channels,
-                                            out_channels=upsampling_channels,
-                                            kernel_size=self.ker_size))
+        self.convs = nn.ModuleList([
+            self._make_conv(i) for i in range(self.intermediate_modules)])
 
-        self.intermediate_convs = nn.ModuleList([
-            self._make_conv() for _ in range(self.intermediate_modules)])
+    def _make_conv(self, i):
+        in_channels = self.in_channels if i == 0 else self.upsampling_channels
+        out_channels = (1 if i == (self.intermediate_modules - 1)
+                        else self.upsampling_channels)
 
-        self.final_conv = nn.Sequential(self.up,
-                                        nn.Conv2d(
-                                            in_channels=upsampling_channels,
-                                            out_channels=1,
-                                            kernel_size=self.ker_size))
-
-    def _make_conv(self):
-        conv = nn.Conv2d(in_channels=self.upsampling_channels,
-                         out_channels=self.upsampling_channels,
+        conv = nn.Conv2d(in_channels=in_channels,
+                         out_channels=out_channels,
                          kernel_size=self.ker_size)
 
         if self.non_linearity:
@@ -259,14 +248,51 @@ class UpsamplingModule(nn.Module):
         return conv
 
     def forward(self, x):
-        # Apply first convolution
-        x = self.first_conv(x)
-
-        # Apply intermediate convolutions
-        for intermediate_conv in self.intermediate_convs:
-            x = intermediate_conv(x)
-
-        # Apply final convolution
-        x = self.final_conv(x)
-
+        # Apply all layers
+        for conv in self.convs:
+            x = conv(x)
         return x
+
+
+class LangVisUpsample(nn.Module):
+    def __init__(self, dict_size, emb_size=1000, hid_size=1000,
+                 vis_size=2688, num_filters=1, mixed_size=1000,
+                 hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
+                 backend='dpn92', mix_we=False, lstm=False, pretrained=True,
+                 extra=True, high_res=False, upsampling_channels=50,
+                 upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
+                 upsampling_amplification=32, langvis_freeze=False):
+        super().__init__()
+        self.langvis = LangVisNet(dict_size, emb_size, hid_size,
+                                  vis_size, num_filters, mixed_size,
+                                  hid_mixed_size, lang_layers, mixed_layers,
+                                  backend, mix_we, lstm, pretrained,
+                                  extra, gpu_pair, high_res)
+        self.high_res = high_res
+        self.langvis_freeze = langvis_freeze
+        if high_res:
+            self.upsample = UpsamplingModule(
+                hid_mixed_size, upsampling_channels, mode=upsampling_mode,
+                ker_size=upsampling_size,
+                amplification=upsampling_amplification)
+        if langvis_freeze:
+            self.langvis.eval()
+
+    def forward(self, vis, lang):
+        if self.langvis_freeze:
+            vis = vis.detach()
+            lang = lang.detach()
+        out = self.langvis(vis, lang)
+        if self.langvis_freeze:
+            out = Variable(out.data)
+        if self.high_res:
+            out = self.upsample(out)
+        return out
+
+    def load_state_dict(self, new_state):
+        state = self.state_dict()
+        for layer in state:
+            if layer in new_state:
+                if state[layer].size() == new_state[layer].size():
+                    state[layer] = new_state[layer]
+        super().load_state_dict(state)
