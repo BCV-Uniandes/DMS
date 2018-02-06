@@ -197,7 +197,7 @@ def visualization():
             text.append('{0}.{1}: {2}'.format(i, j, query))
         text = '<br>'.join(text)
         # vis.text(text, env=args.env)
-        vis_imgs = [vis_imgs.squeeze().numpy(),
+        vis_imgs = [vis_imgs.squeeze().numpy() * 255,
                     masks.expand(
                         3, masks.size(0), masks.size(1)).numpy().copy() * 255]
         # vis.images(imgs.numpy(), env=args.env)
