@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-QSegNet Visdom visualization routines.
-"""
+"""LangVisNet Visdom visualization routines."""
 
 # Standard lib imports
 import argparse
@@ -11,7 +9,6 @@ from urllib.parse import urlparse
 
 # PyTorch imports
 import torch
-# import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -26,7 +23,7 @@ from utils.transforms import ResizeImage, ResizePad
 from visdom import Visdom
 
 parser = argparse.ArgumentParser(
-    description='Query Segmentation Network visualization routine')
+    description='LangVis Segmentation Network visualization routine')
 
 # Dataloading-related settings
 parser.add_argument('--data', type=str, default='../referit_data',
@@ -134,7 +131,6 @@ refer = ReferDataset(data_root=args.data,
                      dataset=args.dataset,
                      split=args.split,
                      transform=input_transform,
-                     # annotation_transform=target_transform,
                      max_query_len=args.time)
 
 loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
@@ -156,7 +152,6 @@ net = LangVisNet(dict_size=len(refer.corpus),
                  upsampling_mode=args.upsamp_mode,
                  upsampling_size=args.upsamp_size)
 
-# net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
@@ -177,6 +172,7 @@ vis = Visdom(server=visdom_url.geturl(), port=port)
 
 
 def visualization():
+    """Display sample model masks using visdom."""
     if not args.no_eval:
         net.eval()
     for i in range(0, args.num_images):
@@ -196,14 +192,10 @@ def visualization():
             query = ' '.join(refer.untokenize_word_vector(word))
             text.append(': {0}'.format(query))
         text = '\n'.join(text)
-        # vis.text(text, env=args.env)
         vis_imgs = [vis_imgs.squeeze().numpy() * 255,
                     masks.expand(
                         3, masks.size(0), masks.size(1)).numpy().copy() * 255]
-        # vis.images(imgs.numpy(), env=args.env)
-        # vis.images(masks.numpy(), env=args.env)
         imgs = Variable(imgs, volatile=True)
-        # masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
         if args.cuda:
             imgs = imgs.cuda()
@@ -215,13 +207,7 @@ def visualization():
         out = out.data.cpu().unsqueeze(0).expand(
             3, out.size(0), out.size(1)).numpy() * 255
         vis_imgs.append(out)
-        print([x.shape for x in vis_imgs])
         vis.images(vis_imgs, env=args.env, opts={'caption': text})
-
-        # if args.heatmap:
-        #     vis.heatmap(out.squeeze(), env=args.env)
-        # else:
-        #     vis.images(out, env=args.env)
 
     print('Done')
 
