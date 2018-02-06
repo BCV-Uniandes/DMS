@@ -181,7 +181,7 @@ def visualization():
         net.eval()
     for i in range(0, args.num_images):
         imgs, masks, words = next(iter(loader))
-        vis_imgs = imgs.squeeze().numpy().copy()
+        vis_imgs = imgs.clone()
         masks = target_transform(masks)
         vis_imgs[:, 0] *= 0.229
         vis_imgs[:, 1] *= 0.224
@@ -197,9 +197,9 @@ def visualization():
             text.append('{0}.{1}: {2}'.format(i, j, query))
         text = '<br>'.join(text)
         # vis.text(text, env=args.env)
-        vis_imgs = [vis_imgs,
+        vis_imgs = [vis_imgs.squeeze().numpy(),
                     masks.expand(
-                        3, masks.size(0), masks.size(1)).numpy().copy()]
+                        3, masks.size(0), masks.size(1)).numpy().copy() * 255]
         # vis.images(imgs.numpy(), env=args.env)
         # vis.images(masks.numpy(), env=args.env)
         imgs = Variable(imgs, volatile=True)
