@@ -199,7 +199,7 @@ def visualization():
         # vis.text(text, env=args.env)
         vis_imgs = [vis_imgs,
                     masks.expand(
-                        3, *masks.size()).numpy().copy()]
+                        3, masks.size(0), masks.size(1)).numpy().copy()]
         # vis.images(imgs.numpy(), env=args.env)
         # vis.images(masks.numpy(), env=args.env)
         imgs = Variable(imgs, volatile=True)
@@ -213,7 +213,7 @@ def visualization():
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         out = F.sigmoid(out)
         out = out.data.cpu().unsqueeze(0).expand(
-            3, out.size()).numpy() * 255
+            3, out.size(0), out.size(1)).numpy() * 255
         vis_imgs.append(out)
         vis.images(vis_imgs, env=args.env, opts={'caption': text})
 
