@@ -181,7 +181,7 @@ def visualization():
         net.eval()
     for i in range(0, args.num_images):
         imgs, masks, words = next(iter(loader))
-        vis_imgs = imgs.numpy().copy()
+        vis_imgs = imgs.squeeze().numpy().copy()
         masks = target_transform(masks)
         vis_imgs[:, 0] *= 0.229
         vis_imgs[:, 1] *= 0.224
