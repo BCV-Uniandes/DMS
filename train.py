@@ -329,7 +329,7 @@ def validate(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(val_loader):
         imgs = Variable(imgs, volatile=True)
-        masks = Variable(masks, volatile=True)
+        masks = Variable(masks.squeeze(), volatile=True)
         words = Variable(words, volatile=True)
 
         if args.cuda:
