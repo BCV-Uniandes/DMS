@@ -190,11 +190,11 @@ def visualization():
         vis_imgs[:, 1] += 0.456
         vis_imgs[:, 2] += 0.406
         text = []
-        text.append('{0}: Queries'.format(i))
+        text.append('{0}: Query'.format(i))
         for j in range(0, words.size(0)):
             word = list(words[j])
             query = ' '.join(refer.untokenize_word_vector(word))
-            text.append('{0}.{1}: {2}'.format(i, j, query))
+            text.append(': {0}'.format(query))
         text = '\n'.join(text)
         # vis.text(text, env=args.env)
         vis_imgs = [vis_imgs.squeeze().numpy() * 255,
