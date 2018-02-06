@@ -181,13 +181,14 @@ def visualization():
         net.eval()
     for i in range(0, args.num_images):
         imgs, masks, words = next(iter(loader))
+        vis_imgs = imgs.numpy().copy()
         masks = target_transform(masks)
-        imgs[:, 0] *= 0.229
-        imgs[:, 1] *= 0.224
-        imgs[:, 2] *= 0.225
-        imgs[:, 0] += 0.485
-        imgs[:, 1] += 0.456
-        imgs[:, 2] += 0.406
+        vis_imgs[:, 0] *= 0.229
+        vis_imgs[:, 1] *= 0.224
+        vis_imgs[:, 2] *= 0.225
+        vis_imgs[:, 0] += 0.485
+        vis_imgs[:, 1] += 0.456
+        vis_imgs[:, 2] += 0.406
         text = []
         text.append('{0}: Queries'.format(i))
         for j in range(0, words.size(0)):
@@ -195,9 +196,12 @@ def visualization():
             query = ' '.join(refer.untokenize_word_vector(word))
             text.append('{0}.{1}: {2}'.format(i, j, query))
         text = '<br>'.join(text)
-        vis.text(text, env=args.env)
-        vis.images(imgs.numpy(), env=args.env)
-        vis.images(masks.numpy(), env=args.env)
+        # vis.text(text, env=args.env)
+        vis_imgs = [vis_imgs,
+                    masks.expand(
+                        3, masks.size(1), masks.size(2)).numpy().copy() * 255]
+        # vis.images(imgs.numpy(), env=args.env)
+        # vis.images(masks.numpy(), env=args.env)
         imgs = Variable(imgs, volatile=True)
         # masks = masks.squeeze().cpu().numpy()
         words = Variable(words, volatile=True)
@@ -208,11 +212,15 @@ def visualization():
         out = F.upsample(out, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         out = F.sigmoid(out)
-        out = out.data.cpu().numpy()
-        if args.heatmap:
-            vis.heatmap(out.squeeze(), env=args.env)
-        else:
-            vis.images(out, env=args.env)
+        out = out.data.cpu().unsqueeze(0).expand(
+            3, out.size(0), out.size(1)).numpy() * 255
+        vis_imgs.append(out)
+        vis.images(vis_imgs, env=args.env, opts={'caption': text})
+
+        # if args.heatmap:
+        #     vis.heatmap(out.squeeze(), env=args.env)
+        # else:
+        #     vis.images(out, env=args.env)
 
     print('Done')
 
