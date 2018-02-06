@@ -215,6 +215,7 @@ def visualization():
         out = out.data.cpu().unsqueeze(0).expand(
             3, out.size(0), out.size(1)).numpy() * 255
         vis_imgs.append(out)
+        print([x.shape for x in vis_imgs])
         vis.images(vis_imgs, env=args.env, opts={'caption': text})
 
         # if args.heatmap:
