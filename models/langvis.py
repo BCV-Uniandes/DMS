@@ -221,21 +221,25 @@ class UpsamplingModule(nn.Module):
                  amplification=32, non_linearity=False):
         super().__init__()
         self.ker_size = ker_size
-        self.intermediate_modules = int(np.log2(amplification))
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
-        self.in_channels = in_channels
-
         self.up = nn.Upsample(scale_factor=2, mode=mode)
+        self.convs = []
+        num_layers = int(np.log2(amplification))
 
-        self.convs = nn.ModuleList([
-            self._make_conv(i) for i in range(self.intermediate_modules)])
+        for out_channels in np.logspace(
+                9, 10 - num_layers, num=num_layers, base=2, dtype=int):
+            self.convs.append(self._make_conv(in_channels, out_channels))
+            in_channels = out_channels
 
-    def _make_conv(self, i):
-        in_channels = self.in_channels if i == 0 else self.upsampling_channels
-        out_channels = (1 if i == (self.intermediate_modules - 1)
-                        else self.upsampling_channels)
+        out_layer = nn.Conv2d(in_channels=in_channels,
+                              out_channels=1,
+                              kernel_size=1,
+                              padding=0)
+        self.convs.append(out_layer)
+        self.convs = nn.ModuleList(self.convs)
 
+    def _make_conv(self, in_channels, out_channels):
         conv = nn.Conv2d(in_channels=in_channels,
                          out_channels=out_channels,
                          kernel_size=self.ker_size,
