@@ -238,7 +238,8 @@ class UpsamplingModule(nn.Module):
 
         conv = nn.Conv2d(in_channels=in_channels,
                          out_channels=out_channels,
-                         kernel_size=self.ker_size)
+                         kernel_size=self.ker_size,
+                         padding=(self.ker_size // 2))
 
         if self.non_linearity:
             conv = nn.Sequential(self.up, conv, nn.PReLU())
