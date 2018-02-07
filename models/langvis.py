@@ -229,8 +229,8 @@ class UpsamplingModule(nn.Module):
 
         for out_channels in np.logspace(
                 9, 10 - num_layers, num=num_layers, base=2, dtype=int):
-            self.convs.append(self._make_conv(in_channels, out_channels))
-            in_channels = out_channels
+            self.convs.append(self._make_conv(int(in_channels), int(out_channels)))
+            in_channels = int(out_channels)
 
         out_layer = nn.Conv2d(in_channels=in_channels,
                               out_channels=1,
