@@ -17,7 +17,7 @@ from torch.autograd import Variable
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import LangVisNet
+from models import LangVisUpsample
 from referit_loader import ReferDataset
 from utils.transforms import ResizeImage, ResizeAnnotation
 
@@ -51,6 +51,8 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--no-eval', action='store_true',
                     help='disable PyTorch evaluation mode')
+parser.add_argument('--old-weights', action='store_true', default=False,
+                    help='load LangVisNet weights on a LangVisUpsample module')
 
 
 # Model settings
@@ -89,6 +91,8 @@ parser.add_argument('--upsamp-mode', default='bilinear', type=str,
                     help='upsampling interpolation mode')
 parser.add_argument('--upsamp-size', default=3, type=int,
                     help='upsampling convolution kernel size')
+parser.add_argument('--upsamp-amplification', default=32, type=int,
+                    help='upsampling scale factor')
 
 args = parser.parse_args()
 
@@ -129,28 +133,36 @@ refer = ReferDataset(data_root=args.data,
 
 # loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = LangVisNet(dict_size=len(refer.corpus),
-                 emb_size=args.emb_size,
-                 hid_size=args.hid_size,
-                 vis_size=args.vis_size,
-                 num_filters=args.num_filters,
-                 mixed_size=args.mixed_size,
-                 hid_mixed_size=args.hid_mixed_size,
-                 lang_layers=args.lang_layers,
-                 mixed_layers=args.mixed_layers,
-                 backend=args.backend,
-                 mix_we=args.mix_we,
-                 lstm=args.lstm,
-                 high_res=args.high_res,
-                 upsampling_channels=args.upsamp_channels,
-                 upsampling_mode=args.upsamp_mode,
-                 upsampling_size=args.upsamp_size)
+net = LangVisUpsample(dict_size=len(refer.corpus),
+                      emb_size=args.emb_size,
+                      hid_size=args.hid_size,
+                      vis_size=args.vis_size,
+                      num_filters=args.num_filters,
+                      mixed_size=args.mixed_size,
+                      hid_mixed_size=args.hid_mixed_size,
+                      lang_layers=args.lang_layers,
+                      mixed_layers=args.mixed_layers,
+                      backend=args.backend,
+                      mix_we=args.mix_we,
+                      lstm=args.lstm,
+                      high_res=args.high_res,
+                      upsampling_channels=args.upsamp_channels,
+                      upsampling_mode=args.upsamp_mode,
+                      upsampling_size=args.upsamp_size,
+                      gpu_pair=args.gpu_pair,
+                      upsampling_amplification=args.upsamp_amplification)
 
 # net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
-    net.load_state_dict(torch.load(args.snapshot))
+    snapshot_dict = torch.load(args.snapshot)
+    if args.old_weights:
+        state = {}
+        for weight_name in snapshot_dict.keys():
+            state['langvis.' + weight_name] = snapshot_dict[weight_name]
+        snapshot_dict = state
+    net.load_state_dict(snapshot_dict)
 
 if args.cuda:
     net.cuda()
@@ -237,7 +249,7 @@ def evaluate():
                 this_string = '| {:<15.3E}| {:<15.8f} | <--' if idx == which else '| {:<15.3E}| {:<15.8f} |'
                 print(this_string.format(thresh, temp_cum_iou[idx]))
             print('+' + '-' * 34 + '+')
-            
+
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
         print('-' * 32)
