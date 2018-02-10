@@ -335,7 +335,8 @@ class DPN(nn.Module):
             in_chs += inc
         blocks['conv5_bn_ac'] = CatBnAct(in_chs)
 
-        self.features = nn.Sequential(blocks)
+        self.features = blocks
+        # self.features = nn.Sequential(blocks)
 
         self.output = output
         if self.output:
@@ -344,7 +345,11 @@ class DPN(nn.Module):
                 in_chs, num_classes, kernel_size=1, bias=True)
 
     def forward(self, x):
-        out = self.features(x)
+        # out = self.features(x)
+        out = x
+        for block in self.features:
+            out = self.features[block](out)
+            print('Layer: {0} - {1}'.format(block, out.size()))
         if self.output:
             if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
