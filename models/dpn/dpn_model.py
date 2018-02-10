@@ -348,7 +348,8 @@ class DPN(nn.Module):
         out = x
         for name, module in self.features.named_children():
             out = module(out)
-            print('Module: {0} - {1}'.format(name, out.size()))
+            size = out[0].size() if isinstance(out, tuple) else out.size()
+            print('Module: {0} - {1}'.format(name, size))
         if self.output:
             if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
