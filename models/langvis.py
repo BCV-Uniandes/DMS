@@ -265,7 +265,7 @@ class UpsamplingModule(nn.Module):
                     features[i].size(-1), features[i].size(-2))):
                 x = F.upsample(
                     x, (features[i].size(-1), features[i].size(-2)),
-                    mode='bilineal')
+                    mode='bilinear')
             x = torch.cat([x, features[i]], dim=1)
             print(x.size())
             x = conv(x)
