@@ -189,6 +189,7 @@ class InputBlock(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
+        print(x.size())
         x = self.bn(x)
         x = self.act(x)
         x = self.pool(x)
