@@ -258,6 +258,7 @@ class UpsamplingModule(nn.Module):
         for conv in self.convs:
             x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
+            i += 1
         return x
 
 
