@@ -349,14 +349,12 @@ class DPN(nn.Module):
         out = x
         features = []
         for name, module in self.features.named_children():
-            if name == 'conv_1_1':
+            if name == 'conv1_1':
                 out, feat = module(out)
                 features.append(feat)
             else:
-                print(name)
                 out = module(out)
                 if isinstance(out, tuple):
-                    print(out[0].size(), out[1].size())
                     features.append(torch.cat(out, dim=1))
                 else:
                     features.append(out)
