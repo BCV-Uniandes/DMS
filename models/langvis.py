@@ -264,7 +264,7 @@ class UpsamplingModule(nn.Module):
             if ((x.size(-2), x.size(-1)) != (
                     features[i].size(-1), features[i].size(-2))):
                 x = F.upsample(
-                    x, (features[i].size(-1), features[i].size(-2)),
+                    x, (features[i].size(-2), features[i].size(-1)),
                     mode='bilinear')
             x = torch.cat([x, features[i]], dim=1)
             print(x.size())
