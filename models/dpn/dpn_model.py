@@ -344,9 +344,11 @@ class DPN(nn.Module):
                 in_chs, num_classes, kernel_size=1, bias=True)
 
     def forward(self, x):
-        out = self.features(x)
+        # out = self.features(x)
+        out = x
         for name, module in self.features.named_children():
-            print(name)
+            out = module(out)
+            print('Module: {0} - {1}'.format(name, out.size()))
         if self.output:
             if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
