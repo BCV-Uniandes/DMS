@@ -354,10 +354,11 @@ class DPN(nn.Module):
                 features.append(feat)
             else:
                 out = module(out)
-                if isinstance(out, tuple):
-                    features.append(torch.cat(out, dim=1))
-                else:
-                    features.append(out)
+                if name in ['conv2_3', 'conv3_4', ' conv4_20', 'conv5_3']:
+                    if isinstance(out, tuple):
+                        features.append(torch.cat(out, dim=1))
+                    else:
+                        features.append(out)
         if self.output:
             if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
