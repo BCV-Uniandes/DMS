@@ -79,7 +79,7 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        vis = self.base(vis)
+        vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
 
@@ -184,7 +184,7 @@ class LangVisNet(nn.Module):
             if self.gpu_pair is not None:
                 self.output_collapse.cuda(self.second_gpu)
             output = self.output_collapse(output)
-        return output
+        return output, base_features
 
     def load_state_dict(self, new_state):
         state = self.state_dict()
@@ -252,9 +252,11 @@ class UpsamplingModule(nn.Module):
 
         return conv
 
-    def forward(self, x):
+    def forward(self, x, features):
         # Apply all layers
+        i = 0
         for conv in self.convs:
+            x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
         return x
 
@@ -287,11 +289,11 @@ class LangVisUpsample(nn.Module):
         if self.langvis_freeze:
             vis = vis.detach()
             lang = lang.detach()
-        out = self.langvis(vis, lang)
+        out, features = self.langvis(vis, lang)
         if self.langvis_freeze:
             out = Variable(out.data)
         if self.high_res:
-            out = self.upsample(out)
+            out = self.upsample(out, features)
         return out
 
     def load_state_dict(self, new_state):
