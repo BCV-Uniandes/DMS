@@ -261,7 +261,8 @@ class UpsamplingModule(nn.Module):
         i = len(features) - 1
         for conv in self.convs:
             print(x.size(), features[i].size())
-            # x = torch.cat([x, features[i]], dim=1)
+            x = torch.cat([x, features[i]], dim=1)
+            print(x.size())
             x = conv(x)
             i -= 1
         x = self.out_layer(x)
