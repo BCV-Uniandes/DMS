@@ -353,6 +353,7 @@ class DPN(nn.Module):
                 out, feat = module(out)
                 features.append(feat)
             else:
+                print(name)
                 out = module(out)
                 if isinstance(out, tuple):
                     print(out)
