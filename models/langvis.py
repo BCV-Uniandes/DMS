@@ -262,7 +262,7 @@ class UpsamplingModule(nn.Module):
         for conv in self.convs:
             print(x.size(), features[i].size())
             if ((x.size(-2), x.size(-1)) != (
-                    features[i].size(-1), features[i].size(-2))):
+                    features[i].size(-2), features[i].size(-1))):
                 x = F.upsample(
                     x, (features[i].size(-2), features[i].size(-1)),
                     mode='bilinear')
