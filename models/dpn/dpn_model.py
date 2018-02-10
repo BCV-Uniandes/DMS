@@ -353,9 +353,9 @@ class DPN(nn.Module):
                 out, feat = module(out)
                 features.append(feat)
             else:
+                print(name)
                 out = module(out)
                 if name in ['conv2_3', 'conv3_4', ' conv4_20', 'conv5_3']:
-                    print(name)
                     if isinstance(out, tuple):
                         features.append(torch.cat(out, dim=1))
                     else:
