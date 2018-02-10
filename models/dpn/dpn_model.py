@@ -349,6 +349,7 @@ class DPN(nn.Module):
         out = x
         for block in self.features:
             out = block(out)
+            print(out)
             print('Layer: {0} - {1}'.format(block, out.size()))
         if self.output:
             if not self.training and self.test_time_pool:
