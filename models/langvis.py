@@ -218,7 +218,8 @@ class LangVisNet(nn.Module):
 class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels=1,
                  mode='bilineal', ker_size=3,
-                 amplification=32, non_linearity=False):
+                 amplification=32, non_linearity=False,
+                 feature_channels=[2688, 1552, 704, 336, 64]):
         super().__init__()
         self.ker_size = ker_size
         self.upsampling_channels = upsampling_channels
@@ -227,9 +228,12 @@ class UpsamplingModule(nn.Module):
         self.convs = []
         num_layers = int(np.log2(amplification))
 
+        i = 0
         for out_channels in np.logspace(
                 9, 10 - num_layers, num=num_layers, base=2, dtype=int):
-            self.convs.append(self._make_conv(int(in_channels), int(out_channels)))
+            self.convs.append(self._make_conv(
+                int(in_channels) + feature_channels[i], int(out_channels)))
+            i += 1
             in_channels = int(out_channels)
 
         self.out_layer = nn.Conv2d(in_channels=in_channels,
@@ -254,12 +258,12 @@ class UpsamplingModule(nn.Module):
 
     def forward(self, x, features):
         # Apply all layers
-        i = 0
+        i = len(features) - 1
         for conv in self.convs:
-            print(features[i].size())
-            # x = torch.cat([x, features[i]], dim=1)
+            # print(features[i].size())
+            x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
-            i += 1
+            i -= 1
         x = self.out_layer(x)
         return x
 
