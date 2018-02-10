@@ -232,11 +232,11 @@ class UpsamplingModule(nn.Module):
             self.convs.append(self._make_conv(int(in_channels), int(out_channels)))
             in_channels = int(out_channels)
 
-        out_layer = nn.Conv2d(in_channels=in_channels,
-                              out_channels=1,
-                              kernel_size=1,
-                              padding=0)
-        self.convs.append(out_layer)
+        self.out_layer = nn.Conv2d(in_channels=in_channels,
+                                   out_channels=1,
+                                   kernel_size=1,
+                                   padding=0)
+        # self.convs.append(out_layer)
         self.convs = nn.ModuleList(self.convs)
 
     def _make_conv(self, in_channels, out_channels):
@@ -259,6 +259,7 @@ class UpsamplingModule(nn.Module):
             x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
             i += 1
+        x = self.out_layer(x)
         return x
 
 
