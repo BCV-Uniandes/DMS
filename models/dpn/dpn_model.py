@@ -335,8 +335,8 @@ class DPN(nn.Module):
             in_chs += inc
         blocks['conv5_bn_ac'] = CatBnAct(in_chs)
 
-        self.features = blocks
-        # self.features = nn.Sequential(blocks)
+        # self.features = blocks
+        self.features = nn.Sequential(blocks)
 
         self.output = output
         if self.output:
