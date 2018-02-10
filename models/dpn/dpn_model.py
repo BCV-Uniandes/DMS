@@ -354,6 +354,7 @@ class DPN(nn.Module):
                 features.append(feat)
             out = module(out)
             if isinstance(out, tuple):
+                print([x.size() for x in out])
                 features.append(torch.cat(out, dim=1))
             else:
                 features.append(out)
