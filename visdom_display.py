@@ -48,6 +48,8 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--old-weights', action='store_true', default=False,
                     help='load LangVisNet weights on a LangVisUpsample module')
+parser.add_argument('--gpu-pair', type=int, default=None,
+                    help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
