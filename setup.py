@@ -10,8 +10,9 @@
 # Standard library imports
 import ast
 import os
-import os.path as osp
 import sys
+import shutil
+import os.path as osp
 
 # Third party imports
 from setuptools import setup, find_packages
@@ -42,8 +43,8 @@ def get_description():
 
 REQUIREMENTS = ['pytorch', 'sru', 'torchvision']
 
-
 os.rename('models', PACKAGE)
+shutil.copytree('utils', osp.join(PACKAGE, 'utils'))
 
 try:
     setup(
@@ -71,4 +72,5 @@ try:
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6'])
 finally:
+    shutil.rmtree(osp.join(PACKAGE, 'utils'))
     os.rename(PACKAGE, 'models')
