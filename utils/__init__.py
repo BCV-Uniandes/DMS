@@ -8,6 +8,11 @@
 
 """Misc data and other helping utillites."""
 
+from .transforms import ResizeImage, ResizeAnnotation
+
+ResizeImage
+ResizeAnnotation
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
