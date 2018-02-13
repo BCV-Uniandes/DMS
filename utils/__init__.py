@@ -8,8 +8,10 @@
 
 """Misc data and other helping utillites."""
 
+from .word_utils import Corpus
 from .transforms import ResizeImage, ResizeAnnotation
 
+Corpus
 ResizeImage
 ResizeAnnotation
 

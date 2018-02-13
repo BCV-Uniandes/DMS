@@ -59,6 +59,15 @@ lines = '\n'.join(lines)
 with open(osp.join(PACKAGE, "__init__.py"), 'w') as f:
     f.write(lines)
 
+with open(osp.join(PACKAGE, 'referit_loader.py'), 'r') as f:
+    text = f.read()
+
+text = text.replace('from utils import Corpus',
+                    'from {0}.utils import Corpus'.format(PACKAGE))
+
+with open(osp.join(PACKAGE, 'referit_loader.py'), 'w') as f:
+    f.write(text)
+
 try:
     setup(
         name=PACKAGE,
