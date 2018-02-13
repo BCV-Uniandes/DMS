@@ -44,7 +44,20 @@ def get_description():
 REQUIREMENTS = ['pytorch', 'sru', 'torchvision']
 
 os.rename('models', PACKAGE)
+shutil.copy('referit_loader.py', PACKAGE)
 shutil.copytree('utils', osp.join(PACKAGE, 'utils'))
+os.rename(
+    osp.join(PACKAGE, "__init__.py"), osp.join(PACKAGE, "__init__.py.bak"))
+
+lines = ''
+with open(osp.join(PACKAGE, "__init__.py.bak"), 'r') as f:
+    lines = f.readlines()
+    lines = [x.strip() for x in lines]
+
+lines.append('from .referit_loader import ReferDataset')
+lines = '\n'.join(lines)
+with open(osp.join(PACKAGE, "__init__.py"), 'w') as f:
+    f.write(lines)
 
 try:
     setup(
@@ -73,4 +86,8 @@ try:
             'Programming Language :: Python :: 3.6'])
 finally:
     shutil.rmtree(osp.join(PACKAGE, 'utils'))
+    os.remove(osp.join(PACKAGE, 'referit_loader.py'))
+    os.remove(osp.join(PACKAGE, '__init__.py'))
+    os.rename(
+        osp.join(PACKAGE, '__init__.py.bak'), osp.join(PACKAGE, '__init__.py'))
     os.rename(PACKAGE, 'models')
