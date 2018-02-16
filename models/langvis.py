@@ -218,13 +218,15 @@ class LangVisNet(nn.Module):
 class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels=1,
                  mode='bilineal', ker_size=3,
-                 amplification=32, non_linearity=False):
+                 amplification=32, non_linearity=False,
+                 langvis_freeze=False):
         super().__init__()
         self.ker_size = ker_size
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
         self.up = nn.Upsample(scale_factor=2, mode=mode)
         self.convs = []
+        self.freeze = langvis_freeze
         num_layers = int(np.log2(amplification))
 
         for out_channels in np.logspace(
@@ -232,11 +234,11 @@ class UpsamplingModule(nn.Module):
             self.convs.append(self._make_conv(int(in_channels), int(out_channels)))
             in_channels = int(out_channels)
 
-        out_layer = nn.Conv2d(in_channels=in_channels,
-                              out_channels=1,
-                              kernel_size=1,
-                              padding=0)
-        self.convs.append(out_layer)
+        self.out_layer = nn.Conv2d(in_channels=in_channels,
+                                   out_channels=1,
+                                   kernel_size=1,
+                                   padding=0)
+        # self.convs.append(out_layer)
         self.convs = nn.ModuleList(self.convs)
 
     def _make_conv(self, in_channels, out_channels):
@@ -254,8 +256,14 @@ class UpsamplingModule(nn.Module):
 
     def forward(self, x):
         # Apply all layers
-        for conv in self.convs:
-            x = conv(x)
+        # for conv in self.convs:
+        #     x = conv(x)
+        for i in range(0, len(self.convs) - 1):
+            x = self.convs[i](x)
+        if self.freeze:
+            x = Variable(x.data)
+        x = self.convs[-1](x)
+        x = self.out_layer(x)
         return x
 
 
@@ -279,7 +287,8 @@ class LangVisUpsample(nn.Module):
             self.upsample = UpsamplingModule(
                 hid_mixed_size, upsampling_channels, mode=upsampling_mode,
                 ker_size=upsampling_size,
-                amplification=upsampling_amplification)
+                amplification=upsampling_amplification,
+                langvis_freeze=langvis_freeze)
         if langvis_freeze:
             self.langvis.eval()
 
