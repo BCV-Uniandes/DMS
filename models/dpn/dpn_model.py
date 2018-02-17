@@ -155,25 +155,25 @@ def dpn107(num_classes=1000, pretrained=False, test_time_pool=True,
 class CatBnAct(nn.Module):
     def __init__(self, in_chs, activation_fn=nn.ReLU(inplace=True)):
         super(CatBnAct, self).__init__()
-        self.bn = nn.BatchNorm2d(in_chs, eps=0.001)
+        self.bn = nn.SELU()
         self.act = activation_fn
 
     def forward(self, x):
         x = torch.cat(x, dim=1) if isinstance(x, tuple) else x
-        return self.act(self.bn(x))
+        return self.bn(x)
 
 
 class BnActConv2d(nn.Module):
     def __init__(self, in_chs, out_chs, kernel_size, stride,
                  padding=0, groups=1, activation_fn=nn.ReLU(inplace=True)):
         super(BnActConv2d, self).__init__()
-        self.bn = nn.BatchNorm2d(in_chs, eps=0.001)
-        self.act = activation_fn
+        self.bn = nn.SELU()
+        # self.act = activation_fn
         self.conv = nn.Conv2d(in_chs, out_chs, kernel_size, stride,
                               padding, groups=groups, bias=False)
 
     def forward(self, x):
-        return self.conv(self.act(self.bn(x)))
+        return self.conv(self.bn(x))
 
 
 class InputBlock(nn.Module):
@@ -183,14 +183,14 @@ class InputBlock(nn.Module):
         self.conv = nn.Conv2d(
             3, num_init_features, kernel_size=kernel_size, stride=2,
             padding=padding, bias=False)
-        self.bn = nn.BatchNorm2d(num_init_features, eps=0.001)
+        self.bn = nn.SELU()
         self.act = activation_fn
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.bn(x)
-        x = self.act(x)
+        # x = self.act(x)
         x = self.pool(x)
         return x
 

@@ -130,7 +130,8 @@ class LangVisNet(nn.Module):
         filters = self.adaptative_filter(linear_in)
         # else:
             # filters = self.adaptative_filter(lang)
-        filters = F.sigmoid(filters)
+        # filters = F.sigmoid(filters)
+        filters = F.selu(filters)
         # LxFx(N+2)x1x1
         filters = filters.view(
             time_steps, self.num_filters, self.vis_size + 8, 1, 1)
@@ -248,7 +249,8 @@ class UpsamplingModule(nn.Module):
                          padding=(self.ker_size // 2))
 
         if self.non_linearity:
-            conv = nn.Sequential(self.up, conv, nn.PReLU())
+            # conv = nn.Sequential(self.up, conv, nn.PReLU())
+            conv = nn.Sequential(self.up, conv, nn.SELU())
         else:
             conv = nn.Sequential(self.up, conv)
 
