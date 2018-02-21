@@ -21,7 +21,7 @@ from referit import REFER
 import torch.utils.data as data
 from referit.refer import mask as cocomask
 
-from utils.word_utils import Corpus
+from utils import Corpus
 
 
 class DatasetNotFoundError(Exception):
