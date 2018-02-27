@@ -203,7 +203,8 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
-                      langvis_freeze=args.langvis_freeze)
+                      langvis_freeze=args.langvis_freeze,
+                      refer=refer)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
@@ -285,7 +286,7 @@ def train(epoch):
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
-        loss = criterion(out_masks, masks)
+        loss = criterion(out_masks, masks.float())
         loss.backward()
         optimizer.step()
 

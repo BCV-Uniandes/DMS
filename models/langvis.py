@@ -12,14 +12,23 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
+import progressbar
+
 
 class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False):
+                 extra=True, gpu_pair=None, high_res=False, refer=None):
         super().__init__()
+
+        # self.emb = nn.Embedding(dict_size, emb_size)
+        emb_size = 300
+        self.emb = nn.Embedding(dict_size, emb_size)
+        pretrained_emb = self.pretrained_glove_embeddings(refer)
+        self.emb.weight.data.copy_(pretrained_emb)
+
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
@@ -30,7 +39,6 @@ class LangVisNet(nn.Module):
             self.base = create_model(
                 backend, 1, pretrained=pretrained)
 
-        self.emb = nn.Embedding(dict_size, emb_size)
         self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers)
         if lstm:
             self.lang_model = nn.LSTM(
@@ -96,6 +104,7 @@ class LangVisNet(nn.Module):
         # LxE ?
         linear_in = []
         lang_mix = []
+        temp_vect = np.squeeze(lang.data.cpu().numpy())
         lang = self.emb(lang)
         if self.gpu_pair is not None:
             lang = lang.cuda(self.first_gpu)
@@ -214,6 +223,21 @@ class LangVisNet(nn.Module):
                      xctr, yctr, 1 / featmap_W, 1 / featmap_H])
         return Variable(torch.from_numpy(spatial_batch_val)).cuda()
 
+    def pretrained_glove_embeddings(self, refer):
+        with open('/home/eamargffoy/SSD1/referit_data/glove.42B.300d.txt', encoding='utf8') as f:
+            glove_list = f.readlines()
+        glove_words = [line.split()[0] for line in glove_list]
+        pretrained_emb = np.random.normal(size=(len(refer.corpus), 300))
+        bar = progressbar.ProgressBar()
+        for i in bar(range(len(refer.corpus))):
+            word = refer.corpus.dictionary.idx2word[i]
+            try:
+                index_in_glove = glove_words.index(word)
+                glove_embedding = np.array(glove_list[index_in_glove].split()[1:])
+                pretrained_emb[i,:] = glove_embedding
+            except:
+                pass
+        return torch.from_numpy(pretrained_emb)
 
 class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels=1,
@@ -279,13 +303,13 @@ class LangVisUpsample(nn.Module):
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
-                 upsampling_amplification=32, langvis_freeze=False):
+                 upsampling_amplification=32, langvis_freeze=False, refer=None):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
-                                  extra, gpu_pair, high_res)
+                                  extra, gpu_pair, high_res, refer=refer)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:
