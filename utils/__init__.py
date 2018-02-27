@@ -8,6 +8,13 @@
 
 """Misc data and other helping utillites."""
 
+from .word_utils import Corpus
+from .transforms import ResizeImage, ResizeAnnotation
+
+Corpus
+ResizeImage
+ResizeAnnotation
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
