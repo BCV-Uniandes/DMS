@@ -191,7 +191,7 @@ class ReferDataset(data.Dataset):
         output_file = '{0}_{1}.pth'.format(self.dataset, setname)
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
 
-    def pull_item(self, idx):
+    def pull_item(self, idx, return_img_path=False):
         img_file, mask_file, phrase = self.images[idx]
 
         img_path = osp.join(self.im_dir, img_file)
@@ -203,9 +203,10 @@ class ReferDataset(data.Dataset):
 
         mask_path = osp.join(self.mask_dir, mask_file)
         mask = torch.load(mask_path)
-
+        if return_img_path:
+            return img, mask, phrase, img_path
         return img, mask, phrase
-
+        
     def tokenize_phrase(self, phrase):
         return self.corpus.tokenize(phrase, self.query_len)
 
