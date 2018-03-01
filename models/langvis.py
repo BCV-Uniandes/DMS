@@ -20,7 +20,9 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False, refer=None):
+                 extra=True, gpu_pair=None, high_res=False, refer=None,
+                 bidirectional_sru=False, bidirectional_linear=False):
+
         super().__init__()
 
         # self.emb = nn.Embedding(dict_size, emb_size)
@@ -34,6 +36,7 @@ class LangVisNet(nn.Module):
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
+        self.bidirectional_linear = bidirectional_linear
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -42,6 +45,12 @@ class LangVisNet(nn.Module):
                 backend, 1, pretrained=pretrained)
 
         self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers)
+        if bidirectional_sru:
+            self.lang_model = SRU(emb_size, (hid_size // 2), num_layers=lang_layers, bidirectional=bidirectional_sru)
+            if bidirectional_linear:
+                self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers, bidirectional=bidirectional_sru)
+                self.sru_linear = nn.Linear(in_features=(hid_size * 2), out_features=hid_size)
+
         if lstm:
             self.lang_model = nn.LSTM(
                 emb_size, hid_size, num_layers=lang_layers)
@@ -305,13 +314,15 @@ class LangVisUpsample(nn.Module):
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
-                 upsampling_amplification=32, langvis_freeze=False, refer=None):
+                 upsampling_amplification=32, langvis_freeze=False, refer=None,
+                 bidirectional_sru=False, bidirectional_linear=False):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
-                                  extra, gpu_pair, high_res, refer=refer)
+                                  extra, gpu_pair, high_res, refer=refer,
+                                  bidirectional_sru=bidirectional_sru, bidirectional_linear=bidirectional_linear)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:

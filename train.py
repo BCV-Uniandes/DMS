@@ -123,6 +123,8 @@ parser.add_argument('--upsamp-amplification', default=32, type=int,
 parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
+parser.add_argument('--bidirectional-sru', action='store_true', default=False)
+parser.add_argument('--bidirectional-linear', action='store_true', default=False)
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -204,7 +206,9 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze,
-                      refer=refer)
+                      refer=refer,
+                      bidirectional_sru=args.bidirectional_sru,
+                      bidirectional_linear=args.bidirectional_linear)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
