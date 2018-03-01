@@ -24,10 +24,12 @@ class LangVisNet(nn.Module):
         super().__init__()
 
         # self.emb = nn.Embedding(dict_size, emb_size)
-        emb_size = 300
         self.emb = nn.Embedding(dict_size, emb_size)
-        pretrained_emb = self.pretrained_glove_embeddings(refer)
-        self.emb.weight.data.copy_(pretrained_emb)
+        if refer is not None:
+            emb_size = 300
+            self.emb = nn.Embedding(dict_size, emb_size)
+            pretrained_emb = self.pretrained_glove_embeddings(refer)
+            self.emb.weight.data.copy_(pretrained_emb)
 
         self.high_res = high_res
         self.vis_size = vis_size
