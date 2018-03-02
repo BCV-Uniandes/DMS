@@ -94,6 +94,8 @@ parser.add_argument('--upsamp-size', default=3, type=int,
                     help='upsampling convolution kernel size')
 parser.add_argument('--upsamp-amplification', default=32, type=int,
                     help='upsampling scale factor')
+parser.add_argument('--bidirectional-sru', action='store_true', default=False)
+parser.add_argument('--bidirectional-linear', action='store_true', default=False)
 
 args = parser.parse_args()
 
@@ -151,8 +153,11 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_mode=args.upsamp_mode,
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
-                      upsampling_amplification=args.upsamp_amplification)
-
+                      upsampling_amplification=args.upsamp_amplification,
+                      langvis_freeze=args.langvis_freeze,
+                      refer=refer,
+                      bidirectional_sru=args.bidirectional_sru,
+                      bidirectional_linear=args.bidirectional_linear)
 # net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
