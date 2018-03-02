@@ -21,7 +21,8 @@ class LangVisNet(nn.Module):
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, gpu_pair=None, high_res=False, refer=None,
-                 bidirectional_sru=False, bidirectional_linear=False):
+                 bidirectional_sru=False, bidirectional_linear=False,
+                 encode_expr=True):
 
         super().__init__()
 
@@ -37,6 +38,7 @@ class LangVisNet(nn.Module):
         self.vis_size = vis_size
         self.num_filters = num_filters
         self.bidirectional_linear = bidirectional_linear
+        self.encode_expr = encode_expr
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -55,6 +57,10 @@ class LangVisNet(nn.Module):
             self.lang_model = nn.LSTM(
                 emb_size, hid_size, num_layers=lang_layers)
 
+        if encode_expr:
+            self.w = nn.Linear(hid_size, 1, bias=False)
+
+
         self.mix_we = mix_we
         lineal_in = hid_size + emb_size * int(mix_we)
         self.adaptative_filter = nn.Linear(
@@ -66,8 +72,17 @@ class LangVisNet(nn.Module):
                                    kernel_size=1,
                                    padding=0)
 
+        if encode_expr:
+            self.comb_conv = nn.Conv2d(in_channels=(8 + emb_size + hid_size +
+                                                vis_size + num_filters + hid_size),
+                                   out_channels=mixed_size,
+                                   kernel_size=1,
+                                   padding=0)
+
         self.mrnn = SRU(mixed_size, hid_mixed_size,
                         num_layers=mixed_layers)
+
+
         if lstm:
             self.mrnn = nn.LSTM(mixed_size, hid_mixed_size,
                                 num_layers=mixed_layers)
@@ -76,6 +91,7 @@ class LangVisNet(nn.Module):
             self.output_collapse = nn.Conv2d(in_channels=hid_mixed_size,
                                              out_channels=1,
                                              kernel_size=1)
+
 
         self.gpu_pair = gpu_pair
         if gpu_pair is not None:
@@ -127,6 +143,15 @@ class LangVisNet(nn.Module):
             vis.size(-2), vis.size(-1)))
         # input has dimensions: seq_length x batch_size (1) x we_dim
         lang, _ = self.lang_model(lang)
+        # lang.size() -> [n_words, batch=1, hid_size] = [11, 1, 1000]
+        if self.encode_expr:
+            w_q = self.w(lang)
+            # w_q.size() -> [n_words, batch=1, w.out_features=1] = [11, 1, 1]
+            bs = F.softmax(w_q, dim=0)
+            # bs.size() -> [n_words, batch=1, w.out_features=1] = [11, 1, 1]
+            phrase = bs*lang
+            phrase = phrase.unsqueeze(-1).unsqueeze(-1).expand(
+                    phrase.size(0), phrase.size(1), phrase.size(2), H, W)
         # Lx1xH
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
@@ -165,7 +190,10 @@ class LangVisNet(nn.Module):
         # Lx(N + 2)xH/32xW/32
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
         # Lx(N + F + H + E + 2)xH/32xW/32
-        q = torch.cat([vis, lang_mix, p], dim=2)
+        if self.encode_expr:
+            q = torch.cat([vis, lang_mix, p, phrase], dim=2)
+        else:
+            q = torch.cat([vis, lang_mix, p], dim=2)
         # Lx1xSxH/32xW/32
         # print(mixed.size())
 
