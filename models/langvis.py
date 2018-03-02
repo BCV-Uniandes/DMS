@@ -150,8 +150,11 @@ class LangVisNet(nn.Module):
             bs = F.softmax(w_q, dim=0)
             # bs.size() -> [n_words, batch=1, w.out_features=1] = [11, 1, 1]
             phrase = bs*lang
-            phrase = phrase.unsqueeze(-1).unsqueeze(-1).expand(
-                    phrase.size(0), phrase.size(1), phrase.size(2), H, W)
+            phrase = torch.sum(phrase, dim=0)
+            # phrase.size() -> [1, hid_size=1000] = [1, 1000]
+            phrase = phrase.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            phrase = phrase.expand(
+                    lang.size(0), phrase.size(1), phrase.size(2), H, W)
         # Lx1xH
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
