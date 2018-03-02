@@ -154,7 +154,6 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
-                      langvis_freeze=args.langvis_freeze,
                       refer=refer,
                       bidirectional_sru=args.bidirectional_sru,
                       bidirectional_linear=args.bidirectional_linear)
