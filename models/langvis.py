@@ -127,6 +127,8 @@ class LangVisNet(nn.Module):
             vis.size(-2), vis.size(-1)))
         # input has dimensions: seq_length x batch_size (1) x we_dim
         lang, _ = self.lang_model(lang)
+        if self.bidirectional_linear:
+            lang = self.sru_linear(lang)
         # Lx1xH
         time_steps = lang.size(0)
         lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
