@@ -346,14 +346,16 @@ class LangVisUpsample(nn.Module):
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
                  upsampling_amplification=32, langvis_freeze=False, refer=None,
-                 bidirectional_sru=False, bidirectional_linear=False):
+                 bidirectional_sru=False, bidirectional_linear=False, encode_expr=False):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
                                   extra, gpu_pair, high_res, refer=refer,
-                                  bidirectional_sru=bidirectional_sru, bidirectional_linear=bidirectional_linear)
+                                  bidirectional_sru=bidirectional_sru,
+                                  bidirectional_linear=bidirectional_linear,
+                                  encode_expr=encode_expr)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:
