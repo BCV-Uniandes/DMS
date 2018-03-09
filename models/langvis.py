@@ -18,11 +18,13 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False):
+                 extra=True, gpu_pair=None, high_res=False, use_filters=False):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
+        self.use_filters = use_filters
+
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -38,8 +40,13 @@ class LangVisNet(nn.Module):
 
         self.mix_we = mix_we
         lineal_in = hid_size + emb_size * int(mix_we)
-        self.adaptative_filter = nn.Linear(
-            in_features=lineal_in, out_features=(num_filters * (vis_size + 8)))
+
+
+        if self.use_filters:
+            self.adaptative_filter = nn.Linear(
+                in_features=lineal_in, out_features=(num_filters * (vis_size + 8)))
+        else:
+            num_filters = 0 # So that comb_conv does not need more channels
 
         self.comb_conv = nn.Conv2d(in_channels=(8 + emb_size + hid_size +
                                                 vis_size + num_filters),
@@ -127,25 +134,29 @@ class LangVisNet(nn.Module):
         # Size: HxL?
         linear_in = linear_in.squeeze()
         # if self.mix_we:
-        filters = self.adaptative_filter(linear_in)
-        # else:
-            # filters = self.adaptative_filter(lang)
-        filters = F.sigmoid(filters)
-        # LxFx(N+2)x1x1
-        filters = filters.view(
-            time_steps, self.num_filters, self.vis_size + 8, 1, 1)
-        p = []
-        for t in range(time_steps):
-            filter = filters[t]
-            p.append(F.conv2d(input=vis, weight=filter).unsqueeze(0))
+        if self.use_filters:
+            filters = self.adaptative_filter(linear_in)
+            # else:
+                # filters = self.adaptative_filter(lang)
+            filters = F.sigmoid(filters)
+            # LxFx(N+2)x1x1
+            filters = filters.view(
+                time_steps, self.num_filters, self.vis_size + 8, 1, 1)
+            p = []
+            for t in range(time_steps):
+                filter = filters[t]
+                p.append(F.conv2d(input=vis, weight=filter).unsqueeze(0))
 
-        # LxFxH/32xW/32
-        p = torch.cat(p)
+            # LxFxH/32xW/32
+            p = torch.cat(p)
 
         # Lx(N + 2)xH/32xW/32
         vis = vis.unsqueeze(0).expand(time_steps, *vis.size())
         # Lx(N + F + H + E + 2)xH/32xW/32
-        q = torch.cat([vis, lang_mix, p], dim=2)
+        if self.use_filters:
+            q = torch.cat([vis, lang_mix, p], dim=2)
+        else: # There's no variable 'p'
+            q = torch.cat([vis, lang_mix], dim=2)
         # Lx1xSxH/32xW/32
         # print(mixed.size())
 
