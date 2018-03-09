@@ -23,7 +23,7 @@ class LangVisNet(nn.Module):
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
-        self.use_filters = use_filters
+
         self.concat_rt = concat_rt
 
         if backend == 'dpn92':
