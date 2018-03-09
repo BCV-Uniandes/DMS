@@ -123,6 +123,7 @@ parser.add_argument('--upsamp-amplification', default=32, type=int,
 parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
+parser.add_argument('--no-embcube', action='store_true', default=False)
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -203,7 +204,8 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
-                      langvis_freeze=args.langvis_freeze)
+                      langvis_freeze=args.langvis_freeze,
+                      no_embcube=args.no_embcube)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)

@@ -18,11 +18,12 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False):
+                 extra=True, gpu_pair=None, high_res=False, no_embcube=False):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
+        self.no_embcube = no_embcube
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -41,11 +42,18 @@ class LangVisNet(nn.Module):
         self.adaptative_filter = nn.Linear(
             in_features=lineal_in, out_features=(num_filters * (vis_size + 8)))
 
-        self.comb_conv = nn.Conv2d(in_channels=(8 + emb_size + hid_size +
-                                                vis_size + num_filters),
-                                   out_channels=mixed_size,
-                                   kernel_size=1,
-                                   padding=0)
+        if not self.no_embcube:
+            self.comb_conv = nn.Conv2d(in_channels=(8 + emb_size + hid_size +
+                                                    vis_size + num_filters),
+                                       out_channels=mixed_size,
+                                       kernel_size=1,
+                                       padding=0)
+        else:
+            self.comb_conv = nn.Conv2d(in_channels=(8 + hid_size +
+                                                    vis_size + num_filters),
+                                       out_channels=mixed_size,
+                                       kernel_size=1,
+                                       padding=0)
 
         self.mrnn = SRU(mixed_size, hid_mixed_size,
                         num_layers=mixed_layers)
@@ -102,9 +110,11 @@ class LangVisNet(nn.Module):
         lang = torch.transpose(lang, 0, 1)
         if self.mix_we:
             linear_in.append(lang.squeeze(dim=1))
-        lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
-            lang.size(0), lang.size(1), lang.size(2),
-            vis.size(-2), vis.size(-1)))
+
+        if not self.no_embcube:
+            lang_mix.append(lang.unsqueeze(-1).unsqueeze(-1).expand(
+                lang.size(0), lang.size(1), lang.size(2),
+                vis.size(-2), vis.size(-1)))
         # input has dimensions: seq_length x batch_size (1) x we_dim
         lang, _ = self.lang_model(lang)
         # Lx1xH
@@ -279,13 +289,13 @@ class LangVisUpsample(nn.Module):
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
-                 upsampling_amplification=32, langvis_freeze=False):
+                 upsampling_amplification=32, langvis_freeze=False, no_embcube=False):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
-                                  extra, gpu_pair, high_res)
+                                  extra, gpu_pair, high_res, no_embcube)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:
