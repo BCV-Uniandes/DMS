@@ -219,8 +219,9 @@ class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels=1,
                  mode='bilineal', ker_size=3,
                  amplification=32, non_linearity=False,
-                 feature_channels=[2688, 1552, 704, 336, 64]):
+                 feature_channels=[2688, 1552, 704, 336, 64], no_unet=False):
         super().__init__()
+        self.no_unet = no_unet
         self.ker_size = ker_size
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
@@ -231,8 +232,13 @@ class UpsamplingModule(nn.Module):
         i = 0
         for out_channels in np.logspace(
                 9, 10 - num_layers, num=num_layers, base=2, dtype=int):
-            self.convs.append(self._make_conv(
-                int(in_channels) + feature_channels[i], int(out_channels)))
+
+            if not self.no_unet:
+                self.convs.append(self._make_conv(
+                    int(in_channels) + feature_channels[i], int(out_channels)))
+            else:
+                self.convs.append(self._make_conv(
+                    int(in_channels), int(out_channels)))
             i += 1
             in_channels = int(out_channels)
 
@@ -265,7 +271,9 @@ class UpsamplingModule(nn.Module):
                 x = F.upsample(
                     x, (features[i].size(-2), features[i].size(-1)),
                     mode='bilinear')
-            x = torch.cat([x, features[i]], dim=1)
+
+            if not self.no_unet:
+                x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
             i -= 1
         x = self.out_layer(x)
@@ -279,7 +287,8 @@ class LangVisUpsample(nn.Module):
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
-                 upsampling_amplification=32, langvis_freeze=False):
+                 upsampling_amplification=32, langvis_freeze=False,
+                 no_unet=False):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
@@ -292,7 +301,8 @@ class LangVisUpsample(nn.Module):
             self.upsample = UpsamplingModule(
                 hid_mixed_size, upsampling_channels, mode=upsampling_mode,
                 ker_size=upsampling_size,
-                amplification=upsampling_amplification)
+                amplification=upsampling_amplification,
+                no_unet=no_unet)
         if langvis_freeze:
             self.langvis.eval()
 
