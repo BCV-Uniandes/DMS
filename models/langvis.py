@@ -38,7 +38,7 @@ class LangVisNet(nn.Module):
         B, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
         
-        output = self.output_collapse(spatial)
+        output = self.output_collapse(vis)
         return output, base_features
 
     def load_state_dict(self, new_state):
