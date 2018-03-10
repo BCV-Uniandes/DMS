@@ -14,7 +14,7 @@ from .dpn.model_factory import create_model
 
 
 class LangVisNet(nn.Module):
-    def __init__(self, backend='dpn92', pretrained=True, extra=True):
+    def __init__(self, backend='dpn92', pretrained=True, extra=True, gpu_pair=None):
         super().__init__()
         if backend == 'dpn92':
             self.base = create_model(
