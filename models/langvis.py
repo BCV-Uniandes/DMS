@@ -14,7 +14,7 @@ from .dpn.model_factory import create_model
 
 
 class LangVisNet(nn.Module):
-    def __init__(self):
+    def __init__(self, backend='dpn92', pretrained=True, extra=True):
         super().__init__()
         if backend == 'dpn92':
             self.base = create_model(
@@ -37,7 +37,7 @@ class LangVisNet(nn.Module):
         B, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
         
-        output = self.output_collapse(output)
+        output = self.output_collapse(spatial)
         return output, base_features
 
     def load_state_dict(self, new_state):
