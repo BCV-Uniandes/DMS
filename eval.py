@@ -67,13 +67,13 @@ parser.add_argument('--hid-size', default=1000, type=int,
                     help='language model hidden size')
 parser.add_argument('--vis-size', default=2688, type=int,
                     help='number of visual filters')
-parser.add_argument('--num-filters', default=1, type=int,
+parser.add_argument('--num-filters', default=10, type=int,
                     help='number of filters to learn')
 parser.add_argument('--mixed-size', default=1000, type=int,
                     help='number of combined lang/visual features filters')
 parser.add_argument('--hid-mixed-size', default=1005, type=int,
                     help='multimodal model hidden size')
-parser.add_argument('--lang-layers', default=2, type=int,
+parser.add_argument('--lang-layers', default=3, type=int,
                     help='number of SRU/LSTM stacked layers')
 parser.add_argument('--mixed-layers', default=3, type=int,
                     help='number of mLSTM/mSRU stacked layers')
@@ -83,7 +83,7 @@ parser.add_argument('--mix-we', action='store_true', default=False,
                     help='train linear layer filters based also on WE')
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
-parser.add_argument('--high-res', action='store_true',
+parser.add_argument('--high-res', action='store_true', default=True,
                     help='high res version of the output through '
                          'upsampling + conv')
 parser.add_argument('--upsamp-channels', default=50, type=int,
@@ -94,6 +94,8 @@ parser.add_argument('--upsamp-size', default=3, type=int,
                     help='upsampling convolution kernel size')
 parser.add_argument('--upsamp-amplification', default=32, type=int,
                     help='upsampling scale factor')
+parser.add_argument('--no-unet', action='store_true', default=False,
+                    help='disable feature concatenation for u-net')
 
 args = parser.parse_args()
 
