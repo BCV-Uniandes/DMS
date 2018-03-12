@@ -134,24 +134,7 @@ refer = ReferDataset(data_root=args.data,
 
 # loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = LangVisUpsample(dict_size=len(refer.corpus),
-                      emb_size=args.emb_size,
-                      hid_size=args.hid_size,
-                      vis_size=args.vis_size,
-                      num_filters=args.num_filters,
-                      mixed_size=args.mixed_size,
-                      hid_mixed_size=args.hid_mixed_size,
-                      lang_layers=args.lang_layers,
-                      mixed_layers=args.mixed_layers,
-                      backend=args.backend,
-                      mix_we=args.mix_we,
-                      lstm=args.lstm,
-                      high_res=args.high_res,
-                      upsampling_channels=args.upsamp_channels,
-                      upsampling_mode=args.upsamp_mode,
-                      upsampling_size=args.upsamp_size,
-                      gpu_pair=args.gpu_pair,
-                      upsampling_amplification=args.upsamp_amplification)
+net = LangVisUpsample()
 
 # net = nn.DataParallel(net)
 
