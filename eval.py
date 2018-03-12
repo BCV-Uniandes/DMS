@@ -153,7 +153,8 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_mode=args.upsamp_mode,
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
-                      upsampling_amplification=args.upsamp_amplification)
+                      upsampling_amplification=args.upsamp_amplification,
+                      no_unet=args.no_unet)
 
 # net = nn.DataParallel(net)
 
