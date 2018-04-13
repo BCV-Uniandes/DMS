@@ -14,10 +14,11 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import optim
+import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.distributed import init_process_group
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -206,6 +207,9 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
+
+init_process_group('gloo', world_size=4)
+net = nn.DistributedDataParallel(net)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
