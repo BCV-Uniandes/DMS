@@ -33,6 +33,8 @@ from utils.transforms import ResizeImage, ResizeAnnotation
 # Other imports
 import numpy as np
 
+GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
+
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
 
@@ -283,10 +285,13 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
-        imgs = [Variable(img) for img in imgs]
+        imgs = [Variable(img).unsqueeze(0).expand(
+                    len(GPUs), img.size(0), img.size(1), img.size(2))
+                for img in imgs]
         print([img.size() for img in imgs])
         masks = [Variable(mask.squeeze()) for mask in masks]
-        words = [Variable(word) for word in words]
+        words = [Variable(word).unsqueeze(0).expand(
+                    len(GPUs), word.size(0), word.size(1)) for word in words]
 
         if args.cuda:
             imgs = [img.cuda() for img in imgs]
