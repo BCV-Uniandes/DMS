@@ -17,35 +17,6 @@ GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
 print(GPUs)
 
 
-def gather_monkeypatch(outputs, target_device, dim=0):
-    r"""
-    Gathers variables from different GPUs on a specified device
-      (-1 means the CPU).
-    """
-    def gather_map(outputs):
-        out = outputs[0]
-        if isinstance(out, Variable):
-            return Gather.apply(target_device, dim, *outputs)
-        if out is None:
-            return None
-        if isinstance(out, dict):
-            if not all((len(out) == len(d) for d in outputs)):
-                raise ValueError('All dicts must have the same number of keys')
-            return type(out)(((k, gather_map([d[k] for d in outputs]))
-                              for k in out))
-        if isinstance(out, list):
-            return type(out)((gather_map(v[0]) for v in outputs))
-        return type(out)(map(gather_map, zip(*outputs)))
-
-    # Recursive function calls like this create reference cycles.
-    # Setting the function to None clears the refcycle.
-    try:
-        return gather_map(outputs)
-    finally:
-        gather_map = None
-
-torch.nn.parallel.scatter_gather.gather = gather_monkeypatch
-
 class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
