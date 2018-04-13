@@ -4,6 +4,7 @@
 Language and Vision (LangVisNet) Network PyTorch implementation.
 """
 
+import os
 import torch
 import numpy as np
 from sru import SRU
@@ -11,6 +12,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from .dpn.model_factory import create_model
+
+GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
 
 
 class LangVisNet(nn.Module):
@@ -79,6 +82,7 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
+        vis = vis[GPUs.index(vis[0].get_device())]
         vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
