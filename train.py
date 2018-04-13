@@ -26,8 +26,8 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from utils import AverageMeter
 from utils.losses import IoULoss
 from models import LangVisUpsample
-from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
+from referit_loader import ReferDataset, collate_fn
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
@@ -170,7 +170,8 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
+                          collate_fn=collate_fn)
 
 start_epoch = args.start_epoch
 
@@ -181,7 +182,7 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
-    val_loader = DataLoader(refer_val, batch_size=args.batch_size)
+    val_loader = DataLoader(refer_val, batch_size=1)
 
 
 if not osp.exists(args.save_folder):
@@ -273,12 +274,12 @@ def train(epoch):
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
         masks = Variable(masks.squeeze())
-        words = Variable(words)
+        words = [Variable(word) for word in words]
 
         if args.cuda:
             imgs = imgs.cuda()
             masks = masks.cuda()
-            words = words.cuda()
+            words = [word.cuda() for word in words]
 
         if args.cuda and args.gpu_pair is not None:
             imgs = imgs.cuda(2*args.gpu_pair)
@@ -386,9 +387,10 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate():
-    net.train()
+    model = net.module
+    model.train()
     if not args.no_eval:
-        net.eval()
+        model.eval()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
                                    #             endpoint=True),
@@ -414,7 +416,7 @@ def evaluate():
             imgs = imgs.cuda()
             words = words.cuda()
             mask = mask.float().cuda()
-        out = net(imgs, words)
+        out = model(imgs, words)
         out = F.sigmoid(out)
         out = F.upsample(out, size=(
             mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()

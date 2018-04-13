@@ -29,6 +29,18 @@ NLP = spacy.load('en_core_web_sm')
 HUNSPELL = spaCyHunSpell(NLP, 'linux')
 NLP.add_pipe(HUNSPELL)
 
+
+def collate_fn(batch):
+    imgs = []
+    masks = []
+    phrases = []
+    for img, mask, phrase in batch:
+        imgs.append(img)
+        masks.append(mask)
+        phrases.append(phrase)
+    return torch.stack(imgs, 0), torch.stack(masks, 0), phrases
+
+
 class DatasetNotFoundError(Exception):
     pass
 
