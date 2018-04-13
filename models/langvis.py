@@ -14,6 +14,7 @@ from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
 GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
+print(GPUs)
 
 
 class LangVisNet(nn.Module):
