@@ -288,7 +288,6 @@ def train(epoch):
         imgs = [Variable(img).unsqueeze(0).expand(
                     len(GPUs), img.size(0), img.size(1), img.size(2))
                 for img in imgs]
-        print([img.size() for img in imgs])
         masks = [Variable(mask.squeeze()) for mask in masks]
         words = [Variable(word) for word in words]
 
