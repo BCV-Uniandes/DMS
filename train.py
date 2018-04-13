@@ -283,13 +283,13 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
-        imgs = Variable(imgs)
-        masks = Variable(masks.squeeze())
+        imgs = [Variable(img) for img in imgs]
+        masks = [Variable(mask.squeeze()) for mask in masks]
         words = [Variable(word) for word in words]
 
         if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
+            imgs = [img.cuda() for img in imgs]
+            masks = [mask.cuda() for mask in masks]
             words = [word.cuda() for word in words]
 
         if args.cuda and args.gpu_pair is not None:

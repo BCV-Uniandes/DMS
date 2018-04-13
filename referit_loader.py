@@ -38,7 +38,7 @@ def collate_fn(batch):
         imgs.append(img)
         masks.append(mask)
         phrases.append(phrase)
-    return torch.stack(imgs, 0), torch.stack(masks, 0), phrases
+    return imgs, masks, phrases
 
 
 class DatasetNotFoundError(Exception):
