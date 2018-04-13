@@ -339,7 +339,7 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        # print([x.size() for x in out_masks])
+        print([x.size() for x in out_masks])
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         if args.gpu_pair is not None:
