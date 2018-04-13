@@ -216,11 +216,12 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
 
-print('Starting distribution node')
-dist.init_process_group(args.backend, init_method=args.dist_url,
-                        world_size=args.world_size)
-print('Done!')
-net = nn.DistributedDataParallel(net)
+# print('Starting distribution node')
+# dist.init_process_group(args.backend, init_method=args.dist_url,
+#                         world_size=args.world_size)
+# print('Done!')
+# net = nn.DistributedDataParallel(net)
+net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
