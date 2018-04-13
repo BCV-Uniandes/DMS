@@ -290,6 +290,7 @@ def train(epoch):
                 for img in imgs]
         masks = [Variable(mask.squeeze()) for mask in masks]
         words = [Variable(word) for word in words]
+        print([word.size() for word in words])
 
         if args.cuda:
             imgs = [img.cuda() for img in imgs]
