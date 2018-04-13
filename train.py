@@ -53,6 +53,7 @@ def gather_monkeypatch(outputs, target_device, dim=0):
             return type(out)(((k, gather_map([d[k] for d in outputs]))
                               for k in out))
         if isinstance(out, list):
+            print([x[0].size() for x in outputs])
             return type(out)((gather_map(v[0]) for v in outputs))
         return type(out)(map(gather_map, zip(*outputs)))
 
@@ -338,7 +339,7 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        print([x.size() for x in out_masks])
+        # print([x.size() for x in out_masks])
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         if args.gpu_pair is not None:
