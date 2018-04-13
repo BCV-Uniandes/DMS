@@ -209,7 +209,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
 
-init_process_group('gloo', world_size=4)
+init_process_group('gloo', world_size=4, rank=0)
 net = nn.DistributedDataParallel(net)
 
 if osp.exists(args.snapshot):
