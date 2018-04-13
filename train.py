@@ -36,7 +36,6 @@ import numpy as np
 
 GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
 
-
 def gather_monkeypatch(outputs, target_device, dim=0):
     r"""
     Gathers variables from different GPUs on a specified device
@@ -64,7 +63,11 @@ def gather_monkeypatch(outputs, target_device, dim=0):
     finally:
         gather_map = None
 
-torch.nn.parallel.scatter_gather.gather = gather_monkeypatch
+
+class CustomDataParallel(nn.DataParallel):
+    def gather(self, outputs, output_device):
+        gather_monkeypatch(outputs, output_device, dim=self.dim)
+
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -254,8 +257,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 #                         world_size=args.world_size)
 # print('Done!')
 # net = nn.DistributedDataParallel(net)
-nn.parallel.gather = gather_monkeypatch
-net = nn.DataParallel(net)
+net = CustomDataParallel(net)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
