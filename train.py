@@ -284,6 +284,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = [Variable(img) for img in imgs]
+        print([img.size() for img in imgs])
         masks = [Variable(mask.squeeze()) for mask in masks]
         words = [Variable(word) for word in words]
 
