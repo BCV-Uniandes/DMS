@@ -69,7 +69,7 @@ def gather_monkeypatch(outputs, target_device, dim=0):
 
 class CustomDataParallel(nn.DataParallel):
     def gather(self, outputs, output_device):
-        gather_monkeypatch(outputs, output_device, dim=self.dim)
+        return gather_monkeypatch(outputs, output_device, dim=self.dim)
 
 
 parser = argparse.ArgumentParser(
