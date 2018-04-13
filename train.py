@@ -16,9 +16,9 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
+import torch.distributed as dist
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from torch.distributed import init_process_group
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -127,6 +127,11 @@ parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
 
+parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
+                    help='url used to set up distributed training')
+parser.add_argument('--dist-backend', default='gloo', type=str,
+                    help='distributed backend')
+
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
                     help='visdom URL endpoint')
@@ -209,7 +214,10 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
 
-init_process_group('gloo', world_size=4, rank=0)
+print('Starting distribution node')
+dist.init_process_group(args.backend, init_method=args.dist_url,
+                        world_size=4, rank=0)
+print('Done!')
 net = nn.DistributedDataParallel(net)
 
 if osp.exists(args.snapshot):
