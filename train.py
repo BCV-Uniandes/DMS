@@ -13,11 +13,13 @@ from urllib.parse import urlparse
 
 # PyTorch imports
 import torch
+import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.nn.parallel._functions import Gather
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -63,7 +65,6 @@ def gather_monkeypatch(outputs, target_device, dim=0):
         gather_map = None
 
 torch.nn.parallel.scatter_gather.gather = gather_monkeypatch
-import torch.nn as nn
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -253,6 +254,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 #                         world_size=args.world_size)
 # print('Done!')
 # net = nn.DistributedDataParallel(net)
+nn.parallel.gather = gather_monkeypatch
 net = nn.DataParallel(net)
 
 if osp.exists(args.snapshot):
