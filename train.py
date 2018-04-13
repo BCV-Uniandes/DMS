@@ -343,7 +343,7 @@ def train(epoch):
         for out_mask, mask in zip(out_masks, masks):
             out_mask = F.upsample(out_mask.unsqueeze(0), size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
-            cur_loss = criterion(out_masks, masks)
+            cur_loss = criterion(out_mask, mask)
             loss = cur_loss if loss is None else cur_loss + loss
         loss /= len(masks)
         loss.backward()
