@@ -339,12 +339,13 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        print([x.size() for x in out_masks])
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        if args.gpu_pair is not None:
-            masks = masks.cuda(2*args.gpu_pair + 1)
-        loss = criterion(out_masks, masks)
+        loss = None
+        for out_mask, mask in zip(out_masks, masks):
+            out_mask = F.upsample(out_mask, size=(
+                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+            cur_loss = criterion(out_masks, masks)
+            loss = cur_loss if loss is None else cur_loss + loss
+        loss /= len(masks)
         loss.backward()
         optimizer.step()
 
