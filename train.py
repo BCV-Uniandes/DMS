@@ -131,6 +131,8 @@ parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
                     help='url used to set up distributed training')
 parser.add_argument('--dist-backend', default='gloo', type=str,
                     help='distributed backend')
+parser.add_argument('--world-size', default=1, type=int,
+                    help='number of distributed processes')
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -216,7 +218,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 
 print('Starting distribution node')
 dist.init_process_group(args.backend, init_method=args.dist_url,
-                        world_size=4, rank=0)
+                        world_size=args.world_size)
 print('Done!')
 net = nn.DistributedDataParallel(net)
 
