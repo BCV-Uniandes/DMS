@@ -315,7 +315,7 @@ class LangVisUpsample(nn.Module):
             out = Variable(out.data)
         if self.high_res:
             out = self.upsample(out, features)
-        return out
+        return [out]
 
     def load_state_dict(self, new_state):
         state = self.state_dict()
