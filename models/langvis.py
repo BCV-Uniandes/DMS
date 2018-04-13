@@ -82,6 +82,8 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
+        print([img.size() for img in vis])
+        print([img.size() for img in lang])
         vis = vis[GPUs.index(vis[0].get_device())]
         print("{0}: {1}".format(
             GPUs[GPUs.index(vis.get_device())], vis.size()))
