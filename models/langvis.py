@@ -13,9 +13,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
-GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
-print(GPUs)
-
 
 class LangVisNet(nn.Module):
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
@@ -84,11 +81,7 @@ class LangVisNet(nn.Module):
     def forward(self, vis, lang):
         # Run image through base FCN
         vis = vis[vis[0].get_device()]
-        print("{0}: {1}".format(
-            GPUs[vis.get_device()], vis.size()))
         lang = lang[lang[0].get_device()]
-        print("{0}: {1}".format(
-            GPUs[lang.get_device()], lang.size()))
         vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)

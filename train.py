@@ -349,8 +349,8 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        total_loss.update(loss.data[0], imgs.size(0))
-        epoch_loss_stats.update(loss.data[0], imgs.size(0))
+        total_loss.update(loss.data[0], len(imgs))
+        epoch_loss_stats.update(loss.data[0], len(imgs))
         # total_loss += loss.data[0]
         # epoch_total_loss += total_loss
 
