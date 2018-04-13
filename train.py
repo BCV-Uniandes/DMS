@@ -53,7 +53,8 @@ def gather_monkeypatch(outputs, target_device, dim=0):
             return type(out)(((k, gather_map([d[k] for d in outputs]))
                               for k in out))
         if isinstance(out, list):
-            ret = type(out)((gather_map(v[0]) for v in outputs))
+            ret = type(out)((gather_map(v[0]) for v in outputs
+                             if v[0] is not None))
             return ret
         return type(out)(map(gather_map, zip(*outputs)))
 
@@ -442,8 +443,6 @@ def compute_mask_IU(masks, target):
 def evaluate():
     model = net.module
     model.train()
-    if not args.no_eval:
-        model.eval()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
                                    #             endpoint=True),

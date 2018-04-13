@@ -80,8 +80,11 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        vis = vis[vis[0].get_device()]
-        lang = lang[lang[0].get_device()]
+        try:
+            vis = vis[vis[0].get_device()]
+            lang = lang[lang[0].get_device()]
+        except IndexError:
+            return [None]
         vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
