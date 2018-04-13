@@ -19,6 +19,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.nn.parallel.scatter_gather import gather
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -63,7 +64,7 @@ def gather_monkeypatch(outputs, target_device, dim=0):
     finally:
         gather_map = None
 
-torch.nn.parallel.scatter_gather.gather = gather_monkeypatch
+gather = gather_monkeypatch
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
