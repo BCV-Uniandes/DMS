@@ -190,6 +190,12 @@ args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 args.distributed = args.world_size > 1
 
+if args.distributed:
+    print('Starting distribution node')
+    dist.init_process_group(args.dist_backend, init_method=args.dist_url,
+                            world_size=args.world_size, rank=args.dist_rank)
+    print('Done!')
+
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
@@ -275,10 +281,6 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze)
 
 if args.distributed:
-    print('Starting distribution node')
-    dist.init_process_group(args.dist_backend, init_method=args.dist_url,
-                            world_size=args.world_size, rank=args.dist_rank)
-    print('Done!')
     if args.cuda:
         net = net.cuda()
     net = CustomDistributedDataParallel(net)
