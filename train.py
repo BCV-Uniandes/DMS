@@ -435,7 +435,6 @@ def evaluate():
     i = 0
     start_time = time.time()
     for imgs, masks, phrases in tqdm(val_loader):
-        imgs = [input_transform(img) for img in imgs]
         imgs = [Variable(img, volatile=True).unsqueeze(0).expand(
                     len(GPUs), img.size(0), img.size(1), img.size(2))
                 for img in imgs]
