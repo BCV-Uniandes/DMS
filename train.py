@@ -33,6 +33,7 @@ from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
 import numpy as np
+from tqdm import tqdm
 
 GPUs = [int(x) for x in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
 
@@ -205,6 +206,7 @@ if args.high_res:
         # ToTensor()
     ])
 
+
 if args.batch_size == 1:
     args.time = -1
 
@@ -227,7 +229,8 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
-    val_loader = DataLoader(refer_val, batch_size=1)
+    val_loader = DataLoader(refer_val, batch_size=args.batch_size,
+                            collate_fn=collate_fn)
 
 
 if not osp.exists(args.save_folder):
@@ -398,40 +401,6 @@ def train(epoch):
     return epoch_total_loss
 
 
-def validate(epoch):
-    net.eval()
-    epoch_total_loss = AverageMeter()
-    start_time = time.time()
-    for batch_idx, (imgs, masks, words) in enumerate(val_loader):
-        imgs = Variable(imgs, volatile=True)
-        masks = Variable(masks.squeeze(), volatile=True)
-        words = Variable(words, volatile=True)
-
-        if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
-            words = words.cuda()
-
-        out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        loss = criterion(out_masks, masks)
-        epoch_total_loss.update(loss.data[0], imgs.size(0))
-
-    epoch_total_loss = epoch_total_loss.avg
-    elapsed_time = time.time() - start_time
-    print('[{:5d}] Validation | elapsed time (ms) {:.6f} |'
-          ' loss {:.6f}'.format(
-              epoch, elapsed_time * 1000, epoch_total_loss))
-    if args.visdom is not None:
-        vis.plot_line('val_plt',
-                      X=torch.ones((1, 1)).cpu() * epoch,
-                      Y=torch.Tensor([epoch_total_loss]).unsqueeze(0).cpu(),
-                      update='append')
-
-    return epoch_total_loss
-
-
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
     temp = (masks * target)
@@ -441,8 +410,7 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate():
-    model = net.module
-    model.train()
+    net.train()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
                                    #             endpoint=True),
@@ -454,64 +422,63 @@ def evaluate():
 
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
+    i = 0
     start_time = time.time()
-    for i in range(0, len(refer_val)):
-        img, mask, phrase = refer_val.pull_item(i)
-        words = refer_val.tokenize_phrase(phrase)
-        h, w, _ = img.shape
-        img = input_transform(img)
-        imgs = Variable(img, volatile=True).unsqueeze(0)
-        mask = mask.squeeze()
-        words = Variable(words, volatile=True).unsqueeze(0)
+    for imgs, masks, phrases in tqdm(val_loader):
+        imgs = [input_transform(img) for img in imgs]
+        imgs = [Variable(img, volatile=True).unsqueeze(0).expand(
+                    len(GPUs), img.size(0), img.size(1), img.size(2))
+                for img in imgs]
+        masks = [Variable(mask.squeeze(), volatile=True) for mask in masks]
+        phrases = [Variable(word, volatile=True).unsqueeze(0).expand(
+                   len(GPUs), word.size(0)) for word in phrases]
 
         if args.cuda:
-            imgs = imgs.cuda()
-            words = words.cuda()
-            mask = mask.float().cuda()
-        out = model(imgs, words)
-        out = F.sigmoid(out)
-        out = F.upsample(out, size=(
-            mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
-        # out = out.squeeze().data.cpu().numpy()
-        # out = out.squeeze()
-        # out = (out >= score_thresh).astype(np.uint8)
-        # out = target_transform(out, (h, w))
+            imgs = [img.cuda() for img in imgs]
+            masks = [mask.cuda() for mask in masks]
+            phrases = [word.cuda() for word in phrases]
 
-        inter = torch.zeros(len(score_thresh))
-        union = torch.zeros(len(score_thresh))
-        for idx, thresh in enumerate(score_thresh):
-            thresholded_out = (out > thresh).float().data
-            try:
-                inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
-            except AssertionError as e:
-                inter[idx] = 0
-                union[idx] = mask.sum()
+        out = net(imgs, phrases)
+        for out_mask, mask in zip(out, masks):
+            out_mask = F.sigmoid(out_mask)
+            out_mask = F.upsample(out, size=(
+                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+            inter = torch.zeros(len(score_thresh))
+            union = torch.zeros(len(score_thresh))
+            for idx, thresh in enumerate(score_thresh):
+                thresholded_out = (out > thresh).float().data
+                try:
+                    inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
+                except AssertionError as e:
+                    inter[idx] = 0
+                    union[idx] = mask.sum()
                 # continue
 
-        cum_I += inter
-        cum_U += union
-        this_iou = inter / union
+                cum_I += inter
+                cum_U += union
+                this_iou = inter / union
 
-        for idx, seg_iou in enumerate(eval_seg_iou_list):
-            for jdx in range(len(score_thresh)):
-                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
+                for idx, seg_iou in enumerate(eval_seg_iou_list):
+                    for jdx in range(len(score_thresh)):
+                        seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
 
-        seg_total += 1
+                seg_total += 1
+                i += 1
 
-        if i != 0 and i % args.log_interval == 0:
-            temp_cum_iou = cum_I / cum_U
-            _, which = torch.max(temp_cum_iou,0)
-            which = which.numpy()
-            print(' ')
-            print('Accumulated IoUs at different thresholds:')
-            print('+' + '-' * 34 + '+')
-            print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
-            print('+' + '-' * 34 + '+')
-            for idx, thresh in enumerate(score_thresh):
-                this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                    if idx == which else '| {:<15.3E}| {:<15.8f} |')
-                print(this_string.format(thresh, temp_cum_iou[idx]))
-            print('+' + '-' * 34 + '+')
+                if i != 0 and i % args.log_interval == 0:
+                    temp_cum_iou = cum_I / cum_U
+                    _, which = torch.max(temp_cum_iou,0)
+                    which = which.numpy()
+                    print(' ')
+                    print('Accumulated IoUs at different thresholds:')
+                    print('+' + '-' * 34 + '+')
+                    print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+                    print('+' + '-' * 34 + '+')
+                    for idx, thresh in enumerate(score_thresh):
+                        this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                            if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                        print(this_string.format(thresh, temp_cum_iou[idx]))
+                    print('+' + '-' * 34 + '+')
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
