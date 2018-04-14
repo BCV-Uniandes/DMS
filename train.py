@@ -21,6 +21,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.nn.parallel._functions import Gather
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
@@ -225,7 +226,15 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
+if args.distributed:
+    sampler = DistributedSampler(refer)
+else:
+    sampler = None
+
+train_loader = DataLoader(refer, batch_size=args.batch_size,
+                          shuffle=(sampler is None),
+                          sampler=sampler,
+                          pin_memory=True,
                           collate_fn=collate_fn)
 
 start_epoch = args.start_epoch
@@ -238,7 +247,7 @@ if args.val is not None:
                              annotation_transform=target_transform,
                              max_query_len=args.time)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            collate_fn=collate_fn)
+                            collate_fn=collate_fn, pin_memory=True)
 
 
 if not osp.exists(args.save_folder):
@@ -329,6 +338,8 @@ if args.iou_loss:
 
 
 def train(epoch):
+    if args.distributed:
+        sampler.set_epoch(epoch)
     net.train()
     total_loss = AverageMeter()
     # total_loss = 0
