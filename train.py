@@ -175,6 +175,8 @@ parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
                     help='url used to set up distributed training')
 parser.add_argument('--dist-backend', default='gloo', type=str,
                     help='distributed backend')
+parser.add_argument('--dist-rank', default=0, type=int,
+                    help='distributed node rank number identification')
 parser.add_argument('--world-size', default=1, type=int,
                     help='number of distributed processes')
 
@@ -266,7 +268,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 if args.distributed:
     print('Starting distribution node')
     dist.init_process_group(args.dist_backend, init_method=args.dist_url,
-                            world_size=args.world_size)
+                            world_size=args.world_size, rank=args.dist_rank)
     print('Done!')
     if args.cuda:
         net = net.cuda()
