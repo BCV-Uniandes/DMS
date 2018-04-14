@@ -84,7 +84,7 @@ class LangVisNet(nn.Module):
             vis = vis[vis[0].get_device()]
             lang = lang[lang[0].get_device()]
         except IndexError:
-            return [None]
+            return None, None
         vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
@@ -307,10 +307,11 @@ class LangVisUpsample(nn.Module):
             vis = vis.detach()
             lang = lang.detach()
         out, features = self.langvis(vis, lang)
-        if self.langvis_freeze:
-            out = Variable(out.data)
-        if self.high_res:
-            out = self.upsample(out, features)
+        if out is not None:
+            if self.langvis_freeze:
+                out = Variable(out.data)
+            if self.high_res:
+                out = self.upsample(out, features)
         return [out]
 
     def load_state_dict(self, new_state):
