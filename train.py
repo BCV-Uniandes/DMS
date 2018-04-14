@@ -265,7 +265,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 
 if args.distributed:
     print('Starting distribution node')
-    dist.init_process_group(args.backend, init_method=args.dist_url,
+    dist.init_process_group(args.dist_backend, init_method=args.dist_url,
                             world_size=args.world_size)
     print('Done!')
     if args.cuda:
