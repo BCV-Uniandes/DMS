@@ -81,7 +81,7 @@ class LangVisNet(nn.Module):
     def forward(self, vis, lang):
         # Run image through base FCN
         try:
-            print([v.size for v in vis])
+            print([v.size() for v in vis])
             vis = vis[vis[0].get_device()]
             lang = lang[lang[0].get_device()]
         except IndexError:
