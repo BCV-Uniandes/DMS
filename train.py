@@ -72,6 +72,11 @@ class CustomDataParallel(nn.DataParallel):
         return gather_monkeypatch(outputs, output_device, dim=self.dim)
 
 
+class CustomDistributedDataParallel(nn.DistributedDataParallel):
+    def gather(self, outputs, output_device):
+        return gather_monkeypatch(outputs, output_device, dim=self.dim)
+
+
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
 
@@ -180,6 +185,7 @@ parser.add_argument('--visdom', type=str, default=None,
 args = parser.parse_args()
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.distributed = args.world_size > 1
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -257,12 +263,16 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
 
-# print('Starting distribution node')
-# dist.init_process_group(args.backend, init_method=args.dist_url,
-#                         world_size=args.world_size)
-# print('Done!')
-# net = nn.DistributedDataParallel(net)
-net = CustomDataParallel(net)
+if args.distributed:
+    print('Starting distribution node')
+    dist.init_process_group(args.backend, init_method=args.dist_url,
+                            world_size=args.world_size)
+    print('Done!')
+    if args.cuda:
+        net = net.cuda()
+    net = CustomDistributedDataParallel(net)
+else:
+    net = CustomDataParallel(net)
 
 if osp.exists(args.snapshot):
     snapshot_dict = torch.load(args.snapshot)
