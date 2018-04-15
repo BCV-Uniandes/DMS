@@ -97,6 +97,8 @@ parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
 parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
+parser.add_argument('--eval-first', default=False, action='store_true',
+                    help='evaluate model weights before training')
 
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
@@ -450,14 +452,15 @@ def evaluate():
         out = net(imgs, phrases)
         for out_mask, mask in zip(out, masks):
             out_mask = F.sigmoid(out_mask)
-            out_mask = F.upsample(out, size=(
+            out_mask = F.upsample(out_mask, size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
             inter = torch.zeros(len(score_thresh))
             union = torch.zeros(len(score_thresh))
             for idx, thresh in enumerate(score_thresh):
-                thresholded_out = (out > thresh).float().data
+                thresholded_out = (out_mask > thresh).float().data
                 try:
-                    inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
+                    inter[idx], union[idx] = compute_mask_IU(
+                        thresholded_out, mask)
                 except AssertionError as e:
                     inter[idx] = 0
                     union[idx] = mask.sum()
@@ -523,6 +526,8 @@ if __name__ == '__main__':
     print('Beginning training')
     best_val_loss = None
     try:
+        if args.eval_first:
+            evaluate()
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
