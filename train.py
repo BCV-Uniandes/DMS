@@ -452,7 +452,7 @@ def evaluate():
         out = net(imgs, phrases)
         for out_mask, mask in zip(out, masks):
             out_mask = F.sigmoid(out_mask)
-            out_mask = F.upsample(out_mask, size=(
+            out_mask = F.upsample(out_mask.unsqueeze(0), size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
             inter = torch.zeros(len(score_thresh))
             union = torch.zeros(len(score_thresh))
