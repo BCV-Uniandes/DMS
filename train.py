@@ -98,6 +98,8 @@ parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
 parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
+parser.add_argument('--eval-first', default=False, action='store_true',
+                    help='evaluate model weights before training')
 
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
@@ -450,30 +452,30 @@ def evaluate():
     i = 0
     start_time = time.time()
     for imgs, masks, phrases in tqdm(val_loader):
-        imgs = [input_transform(img) for img in imgs]
         imgs = [Variable(img, volatile=True).unsqueeze(0).expand(
                     len(GPUs), img.size(0), img.size(1), img.size(2))
                 for img in imgs]
-        masks = [Variable(mask.squeeze(), volatile=True) for mask in masks]
+        masks = [mask.squeeze() for mask in masks]
         phrases = [Variable(word, volatile=True).unsqueeze(0).expand(
                    len(GPUs), word.size(0)) for word in phrases]
 
         if args.cuda:
             imgs = [img.cuda() for img in imgs]
-            masks = [mask.cuda() for mask in masks]
+            masks = [mask.float().cuda() for mask in masks]
             phrases = [word.cuda() for word in phrases]
 
         out = net(imgs, phrases)
         for out_mask, mask in zip(out, masks):
             out_mask = F.sigmoid(out_mask)
-            out_mask = F.upsample(out, size=(
+            out_mask = F.upsample(out_mask.unsqueeze(0), size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
             inter = torch.zeros(len(score_thresh))
             union = torch.zeros(len(score_thresh))
             for idx, thresh in enumerate(score_thresh):
-                thresholded_out = (out > thresh).float().data
+                thresholded_out = (out_mask > thresh).float().data
                 try:
-                    inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
+                    inter[idx], union[idx] = compute_mask_IU(
+                        thresholded_out, mask)
                 except AssertionError as e:
                     inter[idx] = 0
                     union[idx] = mask.sum()
@@ -487,23 +489,23 @@ def evaluate():
                     for jdx in range(len(score_thresh)):
                         seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
 
-                seg_total += 1
-                i += 1
+            seg_total += 1
+            i += 1
 
-                if i != 0 and i % args.log_interval == 0:
-                    temp_cum_iou = cum_I / cum_U
-                    _, which = torch.max(temp_cum_iou,0)
-                    which = which.numpy()
-                    print(' ')
-                    print('Accumulated IoUs at different thresholds:')
-                    print('+' + '-' * 34 + '+')
-                    print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
-                    print('+' + '-' * 34 + '+')
-                    for idx, thresh in enumerate(score_thresh):
-                        this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                            if idx == which else '| {:<15.3E}| {:<15.8f} |')
-                        print(this_string.format(thresh, temp_cum_iou[idx]))
-                    print('+' + '-' * 34 + '+')
+            if i != 0 and i % args.log_interval == 0:
+                temp_cum_iou = cum_I / cum_U
+                _, which = torch.max(temp_cum_iou,0)
+                which = which.numpy()
+                print(' ')
+                print('Accumulated IoUs at different thresholds:')
+                print('+' + '-' * 34 + '+')
+                print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+                print('+' + '-' * 34 + '+')
+                for idx, thresh in enumerate(score_thresh):
+                    this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                        if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                    print(this_string.format(thresh, temp_cum_iou[idx]))
+                print('+' + '-' * 34 + '+')
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
@@ -539,6 +541,8 @@ if __name__ == '__main__':
     print('Beginning training')
     best_val_loss = None
     try:
+        if args.eval_first:
+            evaluate()
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
