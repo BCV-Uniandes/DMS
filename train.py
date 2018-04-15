@@ -446,7 +446,7 @@ def evaluate():
 
         if args.cuda:
             imgs = [img.cuda() for img in imgs]
-            masks = [mask.cuda() for mask in masks]
+            masks = [mask.float().cuda() for mask in masks]
             phrases = [word.cuda() for word in phrases]
 
         out = net(imgs, phrases)
