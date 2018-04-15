@@ -72,7 +72,7 @@ class CustomDataParallel(nn.DataParallel):
         return gather_monkeypatch(outputs, output_device, dim=self.dim)
 
 
-class CustomDistributedDataParallel(nn.DistributedDataParallel):
+class CustomDistributedDataParallel(nn.parallel.DistributedDataParallel):
     def gather(self, outputs, output_device):
         return gather_monkeypatch(outputs, output_device, dim=self.dim)
 
