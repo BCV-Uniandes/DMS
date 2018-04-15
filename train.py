@@ -440,7 +440,7 @@ def evaluate():
         imgs = [Variable(img, volatile=True).unsqueeze(0).expand(
                     len(GPUs), img.size(0), img.size(1), img.size(2))
                 for img in imgs]
-        masks = [Variable(mask.squeeze(), volatile=True) for mask in masks]
+        masks = [mask.squeeze() for mask in masks]
         phrases = [Variable(word, volatile=True).unsqueeze(0).expand(
                    len(GPUs), word.size(0)) for word in phrases]
 
@@ -474,23 +474,23 @@ def evaluate():
                     for jdx in range(len(score_thresh)):
                         seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
 
-            seg_total += 1
-            i += 1
+                seg_total += 1
+                i += 1
 
-            if i != 0 and i % args.log_interval == 0:
-                temp_cum_iou = cum_I / cum_U
-                _, which = torch.max(temp_cum_iou,0)
-                which = which.numpy()
-                print(' ')
-                print('Accumulated IoUs at different thresholds:')
-                print('+' + '-' * 34 + '+')
-                print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
-                print('+' + '-' * 34 + '+')
-                for idx, thresh in enumerate(score_thresh):
-                    this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                        if idx == which else '| {:<15.3E}| {:<15.8f} |')
-                    print(this_string.format(thresh, temp_cum_iou[idx]))
-                print('+' + '-' * 34 + '+')
+                if i != 0 and i % args.log_interval == 0:
+                    temp_cum_iou = cum_I / cum_U
+                    _, which = torch.max(temp_cum_iou,0)
+                    which = which.numpy()
+                    print(' ')
+                    print('Accumulated IoUs at different thresholds:')
+                    print('+' + '-' * 34 + '+')
+                    print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+                    print('+' + '-' * 34 + '+')
+                    for idx, thresh in enumerate(score_thresh):
+                        this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                            if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                        print(this_string.format(thresh, temp_cum_iou[idx]))
+                    print('+' + '-' * 34 + '+')
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
