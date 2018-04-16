@@ -21,6 +21,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.nn.parallel._functions import Gather
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
@@ -99,6 +100,8 @@ parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
 parser.add_argument('--eval-first', default=False, action='store_true',
                     help='evaluate model weights before training')
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
 
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
@@ -177,6 +180,8 @@ parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
                     help='url used to set up distributed training')
 parser.add_argument('--dist-backend', default='gloo', type=str,
                     help='distributed backend')
+parser.add_argument('--dist-rank', default=0, type=int,
+                    help='distributed node rank number identification')
 parser.add_argument('--world-size', default=1, type=int,
                     help='number of distributed processes')
 
@@ -188,6 +193,12 @@ args = parser.parse_args()
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 args.distributed = args.world_size > 1
+
+if args.distributed:
+    print('Starting distribution node')
+    dist.init_process_group(args.dist_backend, init_method=args.dist_url,
+                            world_size=args.world_size, rank=args.dist_rank)
+    print('Done!')
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -225,8 +236,17 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
-                          collate_fn=collate_fn)
+if args.distributed:
+    sampler = DistributedSampler(refer)
+else:
+    sampler = None
+
+train_loader = DataLoader(refer, batch_size=args.batch_size,
+                          shuffle=(sampler is None),
+                          sampler=sampler,
+                          pin_memory=True,
+                          collate_fn=collate_fn,
+                          num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -238,7 +258,8 @@ if args.val is not None:
                              annotation_transform=target_transform,
                              max_query_len=args.time)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            collate_fn=collate_fn)
+                            collate_fn=collate_fn, pin_memory=True,
+                            num_workers=args.workers)
 
 
 if not osp.exists(args.save_folder):
@@ -266,10 +287,6 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze)
 
 if args.distributed:
-    print('Starting distribution node')
-    dist.init_process_group(args.backend, init_method=args.dist_url,
-                            world_size=args.world_size)
-    print('Done!')
     if args.cuda:
         net = net.cuda()
     net = CustomDistributedDataParallel(net)
@@ -329,6 +346,8 @@ if args.iou_loss:
 
 
 def train(epoch):
+    if args.distributed:
+        sampler.set_epoch(epoch)
     net.train()
     total_loss = AverageMeter()
     # total_loss = 0
