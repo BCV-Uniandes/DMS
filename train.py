@@ -262,7 +262,7 @@ if args.val is not None:
         val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             collate_fn=collate_fn, pin_memory=True,
-                            num_workers=args.workers, sampler=sampler)
+                            num_workers=args.workers, sampler=val_sampler)
 
 
 if not osp.exists(args.save_folder):
