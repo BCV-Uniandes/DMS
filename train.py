@@ -257,9 +257,12 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
+    val_sampler = None
+    if args.distributed:
+        val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             collate_fn=collate_fn, pin_memory=True,
-                            num_workers=args.workers)
+                            num_workers=args.workers, sampler=sampler)
 
 
 if not osp.exists(args.save_folder):
@@ -473,7 +476,7 @@ def evaluate():
             out_mask = F.sigmoid(out_mask)
             if not args.distributed:
                 out_mask = out_mask.unsqueeze(0)
-            out_mask = F.upsample(out_mask.unsqueeze(0), size=(
+            out_mask = F.upsample(out_mask, size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
             inter = torch.zeros(len(score_thresh))
             union = torch.zeros(len(score_thresh))
