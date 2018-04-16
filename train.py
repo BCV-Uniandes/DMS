@@ -52,6 +52,10 @@ parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
 parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
+parser.add_argument('--eval-first', default=False, action='store_true',
+                    help='evaluate model weights before training')
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
 
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
@@ -169,7 +173,8 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
+                          pin_memory=True, num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -180,7 +185,8 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
-    val_loader = DataLoader(refer_val, batch_size=args.batch_size)
+    val_loader = DataLoader(refer_val, batch_size=args.batch_size,
+                            pin_memory=True, num_workers=args.workers)
 
 
 if not osp.exists(args.save_folder):
@@ -383,8 +389,6 @@ def compute_mask_IU(masks, target):
 
 def evaluate():
     net.train()
-    if not args.no_eval:
-        net.eval()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
                                    #             endpoint=True),
@@ -488,6 +492,8 @@ def evaluate():
 if __name__ == '__main__':
     print('Beginning training')
     best_val_loss = None
+    if args.eval_first:
+        evaluate()
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
