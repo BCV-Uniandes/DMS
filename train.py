@@ -402,7 +402,7 @@ def evaluate():
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
     start_time = time.time()
-    for img, mask, phrase in tqdm(refer_val, dynamic_ncols=True):
+    for img, mask, phrase in tqdm(val_loader, dynamic_ncols=True):
         # img, mask, phrase = refer_val.pull_item(i)
         # words = refer_val.tokenize_phrase(phrase)
         # h, w, _ = img.shape
