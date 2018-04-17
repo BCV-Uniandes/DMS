@@ -30,6 +30,7 @@ from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
+import tqdm
 import numpy as np
 
 parser = argparse.ArgumentParser(
@@ -401,14 +402,14 @@ def evaluate():
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
     start_time = time.time()
-    for i in range(0, len(refer_val)):
-        img, mask, phrase = refer_val.pull_item(i)
-        words = refer_val.tokenize_phrase(phrase)
-        h, w, _ = img.shape
-        img = input_transform(img)
+    for img, mask, phrase in tqdm(refer_val):
+        # img, mask, phrase = refer_val.pull_item(i)
+        # words = refer_val.tokenize_phrase(phrase)
+        # h, w, _ = img.shape
+        # img = input_transform(img)
         imgs = Variable(img, volatile=True).unsqueeze(0)
         mask = mask.squeeze()
-        words = Variable(words, volatile=True).unsqueeze(0)
+        words = Variable(phrase, volatile=True).unsqueeze(0)
 
         if args.cuda:
             imgs = imgs.cuda()
@@ -444,7 +445,7 @@ def evaluate():
 
         seg_total += 1
 
-        if i != 0 and i % args.log_interval == 0:
+        if seg_total != 0 and seg_total % args.log_interval + 1000 == 0:
             temp_cum_iou = cum_I / cum_U
             _, which = torch.max(temp_cum_iou,0)
             which = which.numpy()
