@@ -79,7 +79,7 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        vis = self.base(vis)
+        vis, base_features = self.base(vis)
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
 
@@ -185,7 +185,7 @@ class LangVisNet(nn.Module):
             if self.gpu_pair is not None:
                 self.output_collapse.cuda(self.second_gpu)
             output = self.output_collapse(output)
-        return output
+        return output, base_features
 
     def load_state_dict(self, new_state):
         state = self.state_dict()
@@ -220,19 +220,21 @@ class UpsamplingModule(nn.Module):
     def __init__(self, in_channels, upsampling_channels=1,
                  mode='bilineal', ker_size=3,
                  amplification=32, non_linearity=False,
-                 langvis_freeze=False):
+                 feature_channels=[2688, 1552, 704, 336, 64]):
         super().__init__()
         self.ker_size = ker_size
         self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
         self.up = nn.Upsample(scale_factor=2, mode=mode)
         self.convs = []
-        self.freeze = langvis_freeze
         num_layers = int(np.log2(amplification))
 
+        i = 0
         for out_channels in np.logspace(
                 9, 10 - num_layers, num=num_layers, base=2, dtype=int):
-            self.convs.append(self._make_conv(int(in_channels), int(out_channels)))
+            self.convs.append(self._make_conv(
+                int(in_channels) + feature_channels[i], int(out_channels)))
+            i += 1
             in_channels = int(out_channels)
 
         self.out_layer = nn.Conv2d(in_channels=in_channels,
@@ -256,15 +258,18 @@ class UpsamplingModule(nn.Module):
 
         return conv
 
-    def forward(self, x):
+    def forward(self, x, features):
         # Apply all layers
-        # for conv in self.convs:
-        #     x = conv(x)
-        for i in range(0, len(self.convs) - 1):
-            x = self.convs[i](x)
-        if self.freeze:
-            x = Variable(x.data)
-        x = self.convs[-1](x)
+        i = len(features) - 1
+        for conv in self.convs:
+            if ((x.size(-2), x.size(-1)) != (
+                    features[i].size(-2), features[i].size(-1))):
+                x = F.upsample(
+                    x, (features[i].size(-2), features[i].size(-1)),
+                    mode='bilinear')
+            x = torch.cat([x, features[i]], dim=1)
+            x = conv(x)
+            i -= 1
         x = self.out_layer(x)
         return x
 
@@ -289,8 +294,7 @@ class LangVisUpsample(nn.Module):
             self.upsample = UpsamplingModule(
                 hid_mixed_size, upsampling_channels, mode=upsampling_mode,
                 ker_size=upsampling_size,
-                amplification=upsampling_amplification,
-                langvis_freeze=langvis_freeze)
+                amplification=upsampling_amplification)
         if langvis_freeze:
             self.langvis.eval()
 
@@ -298,11 +302,11 @@ class LangVisUpsample(nn.Module):
         if self.langvis_freeze:
             vis = vis.detach()
             lang = lang.detach()
-        out = self.langvis(vis, lang)
+        out, features = self.langvis(vis, lang)
         if self.langvis_freeze:
             out = Variable(out.data)
         if self.high_res:
-            out = self.upsample(out)
+            out = self.upsample(out, features)
         return out
 
     def load_state_dict(self, new_state):

@@ -188,11 +188,12 @@ class InputBlock(nn.Module):
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, x):
+        conv = self.conv(x)
         x = self.conv(x)
         x = self.bn(x)
         # x = self.act(x)
         x = self.pool(x)
-        return x
+        return x, conv
 
 
 class DualPathBlock(nn.Module):
@@ -344,7 +345,20 @@ class DPN(nn.Module):
                 in_chs, num_classes, kernel_size=1, bias=True)
 
     def forward(self, x):
-        out = self.features(x)
+        # out = self.features(x)
+        out = x
+        features = []
+        for name, module in self.features.named_children():
+            if name == 'conv1_1':
+                out, feat = module(out)
+                features.append(feat)
+            else:
+                out = module(out)
+                if name in ['conv2_3', 'conv3_4', 'conv4_20', 'conv5_3']:
+                    if isinstance(out, tuple):
+                        features.append(torch.cat(out, dim=1))
+                    else:
+                        features.append(out)
         if self.output:
             if not self.training and self.test_time_pool:
                 out = F.avg_pool2d(out, kernel_size=7, stride=1)
@@ -356,7 +370,7 @@ class DPN(nn.Module):
                 x = adaptive_avgmax_pool2d(x, pool_type='avg')
                 out = self.classifier(x)
             out = out.view(out.size(0), -1)
-        return out
+        return out, features
 
     def load_state_dict(self, new_state):
         state = self.state_dict()

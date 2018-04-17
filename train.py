@@ -29,6 +29,9 @@ from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizeImage, ResizeAnnotation
 
+# Other imports
+import tqdm
+import numpy as np
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -50,6 +53,10 @@ parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
 parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
+parser.add_argument('--eval-first', default=False, action='store_true',
+                    help='evaluate model weights before training')
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
 
 # Training procedure settings
 parser.add_argument('--no-cuda', action='store_true',
@@ -93,13 +100,13 @@ parser.add_argument('--hid-size', default=1000, type=int,
                     help='language model hidden size')
 parser.add_argument('--vis-size', default=2688, type=int,
                     help='number of visual filters')
-parser.add_argument('--num-filters', default=1, type=int,
+parser.add_argument('--num-filters', default=10, type=int,
                     help='number of filters to learn')
 parser.add_argument('--mixed-size', default=1000, type=int,
                     help='number of combined lang/visual features filters')
 parser.add_argument('--hid-mixed-size', default=1005, type=int,
                     help='multimodal model hidden size')
-parser.add_argument('--lang-layers', default=2, type=int,
+parser.add_argument('--lang-layers', default=3, type=int,
                     help='number of SRU/LSTM stacked layers')
 parser.add_argument('--mixed-layers', default=3, type=int,
                     help='number of mLSTM/mSRU stacked layers')
@@ -167,7 +174,8 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
+train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
+                          pin_memory=True, num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -176,9 +184,10 @@ if args.val is not None:
                              dataset=args.dataset,
                              split=args.val,
                              transform=input_transform,
-                             # annotation_transform=target_transform,
+                             annotation_transform=target_transform,
                              max_query_len=args.time)
-    val_loader = DataLoader(refer_val, batch_size=args.batch_size)
+    val_loader = DataLoader(refer_val, batch_size=args.batch_size,
+                            pin_memory=True, num_workers=args.workers)
 
 
 if not osp.exists(args.save_folder):
@@ -302,13 +311,13 @@ def train(epoch):
                           update='append')
 
         if batch_idx % args.backup_iters == 0:
-            filename = 'qsegnet_{0}_{1}_snapshot.pth'.format(
+            filename = 'dmn_{0}_{1}_snapshot.pth'.format(
                 args.dataset, args.split)
             filename = osp.join(args.save_folder, filename)
             state_dict = net.state_dict()
             torch.save(state_dict, filename)
 
-            optim_filename = 'qsegnet_{0}_{1}_optim.pth'.format(
+            optim_filename = 'dmn_{0}_{1}_optim.pth'.format(
                 args.dataset, args.split)
             optim_filename = osp.join(args.save_folder, optim_filename)
             state_dict = optimizer.state_dict()
@@ -371,16 +380,128 @@ def validate(epoch):
     return epoch_total_loss
 
 
+def compute_mask_IU(masks, target):
+    assert(target.shape[-2:] == masks.shape[-2:])
+    temp = (masks * target)
+    intersection = temp.sum()
+    union = ((masks + target) - temp).sum()
+    return intersection, union
+
+
+def evaluate():
+    net.train()
+    score_thresh = np.concatenate([# [0],
+                                   # np.logspace(start=-16, stop=-2, num=10,
+                                   #             endpoint=True),
+                                   np.arange(start=0.00, stop=0.96,
+                                             step=0.025)]).tolist()
+    cum_I = torch.zeros(len(score_thresh))
+    cum_U = torch.zeros(len(score_thresh))
+    eval_seg_iou_list = [.5, .6, .7, .8, .9]
+
+    seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
+    seg_total = 0
+    start_time = time.time()
+    for img, mask, phrase in tqdm(refer_val):
+        # img, mask, phrase = refer_val.pull_item(i)
+        # words = refer_val.tokenize_phrase(phrase)
+        # h, w, _ = img.shape
+        # img = input_transform(img)
+        imgs = Variable(img, volatile=True).unsqueeze(0)
+        mask = mask.squeeze()
+        words = Variable(phrase, volatile=True).unsqueeze(0)
+
+        if args.cuda:
+            imgs = imgs.cuda()
+            words = words.cuda()
+            mask = mask.float().cuda()
+        out = net(imgs, words)
+        out = F.sigmoid(out)
+        out = F.upsample(out, size=(
+            mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+        # out = out.squeeze().data.cpu().numpy()
+        # out = out.squeeze()
+        # out = (out >= score_thresh).astype(np.uint8)
+        # out = target_transform(out, (h, w))
+
+        inter = torch.zeros(len(score_thresh))
+        union = torch.zeros(len(score_thresh))
+        for idx, thresh in enumerate(score_thresh):
+            thresholded_out = (out > thresh).float().data
+            try:
+                inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
+            except AssertionError as e:
+                inter[idx] = 0
+                union[idx] = mask.sum()
+                # continue
+
+        cum_I += inter
+        cum_U += union
+        this_iou = inter / union
+
+        for idx, seg_iou in enumerate(eval_seg_iou_list):
+            for jdx in range(len(score_thresh)):
+                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
+
+        seg_total += 1
+
+        if seg_total != 0 and seg_total % args.log_interval + 1000 == 0:
+            temp_cum_iou = cum_I / cum_U
+            _, which = torch.max(temp_cum_iou,0)
+            which = which.numpy()
+            print(' ')
+            print('Accumulated IoUs at different thresholds:')
+            print('+' + '-' * 34 + '+')
+            print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+            print('+' + '-' * 34 + '+')
+            for idx, thresh in enumerate(score_thresh):
+                this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                    if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                print(this_string.format(thresh, temp_cum_iou[idx]))
+            print('+' + '-' * 34 + '+')
+
+    # Evaluation finished. Compute total IoUs and threshold that maximizes
+    for jdx, thresh in enumerate(score_thresh):
+        print('-' * 32)
+        print('precision@X for Threshold {:<15.3E}'.format(thresh))
+        for idx, seg_iou in enumerate(eval_seg_iou_list):
+            print('precision@{:s} = {:.5f}'.format(
+                str(seg_iou), seg_correct[idx, jdx] / seg_total))
+
+    # Print final accumulated IoUs
+    final_ious = cum_I / cum_U
+    print('-' * 32 + '\n' + '')
+    print('FINAL accumulated IoUs at different thresholds:')
+    print('{:15}| {:15} |'.format('Thresholds', 'mIoU'))
+    print('-' * 32)
+    for idx, thresh in enumerate(score_thresh):
+        print('{:<15.3E}| {:<15.13f} |'.format(thresh, final_ious[idx]))
+    print('-' * 32)
+
+    max_iou, max_idx = torch.max(final_ious, 0)
+    max_iou = float(max_iou.numpy())
+    max_idx = int(max_idx.numpy())
+
+    # Print maximum IoU
+    print('Evaluation done. Elapsed time: {:.3f} (s) '.format(
+        time.time() - start_time))
+    print('Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(
+        max_iou, score_thresh[max_idx]))
+    return max_iou
+
+
 if __name__ == '__main__':
     print('Beginning training')
     best_val_loss = None
+    if args.eval_first:
+        evaluate()
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
             val_loss = train_loss
             if args.val is not None:
-                val_loss = validate(epoch)
+                val_loss = 1 - evaluate()
             scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
@@ -389,7 +510,7 @@ if __name__ == '__main__':
             print('-' * 89)
             if best_val_loss is None or val_loss < best_val_loss:
                 best_val_loss = val_loss
-                filename = osp.join(args.save_folder, 'qsegnet_weights.pth')
+                filename = osp.join(args.save_folder, 'dmn_best_weights.pth')
                 torch.save(net.state_dict(), filename)
     except KeyboardInterrupt:
         print('-' * 89)
