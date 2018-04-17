@@ -407,9 +407,9 @@ def evaluate():
         # words = refer_val.tokenize_phrase(phrase)
         # h, w, _ = img.shape
         # img = input_transform(img)
-        imgs = Variable(img, volatile=True).unsqueeze(0)
+        imgs = Variable(img, volatile=True)
         mask = mask.squeeze()
-        words = Variable(phrase, volatile=True).unsqueeze(0)
+        words = Variable(phrase, volatile=True)
 
         if args.cuda:
             imgs = imgs.cuda()
