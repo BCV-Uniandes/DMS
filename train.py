@@ -30,8 +30,8 @@ from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
-import tqdm
 import numpy as np
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -402,7 +402,7 @@ def evaluate():
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
     start_time = time.time()
-    for img, mask, phrase in tqdm(refer_val):
+    for img, mask, phrase in tqdm(refer_val, dynamic_ncols=True):
         # img, mask, phrase = refer_val.pull_item(i)
         # words = refer_val.tokenize_phrase(phrase)
         # h, w, _ = img.shape
@@ -445,7 +445,7 @@ def evaluate():
 
         seg_total += 1
 
-        if seg_total != 0 and seg_total % args.log_interval + 1000 == 0:
+        if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
             temp_cum_iou = cum_I / cum_U
             _, which = torch.max(temp_cum_iou,0)
             which = which.numpy()
