@@ -25,7 +25,6 @@ class Dictionary(object):
         self.idx2word = []
 
     def add_word(self, word):
-        print(word)
         word = self.spellcheck(word)
         if word not in self.word2idx:
             self.idx2word.append(word)
@@ -33,7 +32,7 @@ class Dictionary(object):
         return self.word2idx[word]
 
     def spellcheck(self, word):
-        if word != UNK_TOKEN or word != PAD_TOKEN:
+        if word != UNK_TOKEN and word != PAD_TOKEN:
             doc = NLP(word)[0]
             if not doc._.hunspell_spell:
                 try:
@@ -42,7 +41,7 @@ class Dictionary(object):
                         word = word.replace(' ', '')
                 except:
                     pass
-                print("Correction: {0}".format(word))
+                # print("Correction: {0}".format(word))
         return word
 
     def __len__(self):
