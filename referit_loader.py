@@ -13,21 +13,15 @@ import cv2
 import json
 import uuid
 import torch
-import spacy
 import progressbar
 import numpy as np
 import os.path as osp
 import scipy.io as sio
 from referit import REFER
 import torch.utils.data as data
-from spacy_hunspell import spaCyHunSpell
 from referit.refer import mask as cocomask
 
 from utils import Corpus
-
-NLP = spacy.load('en_core_web_sm')
-HUNSPELL = spaCyHunSpell(NLP, 'linux')
-NLP.add_pipe(HUNSPELL)
 
 class DatasetNotFoundError(Exception):
     pass
