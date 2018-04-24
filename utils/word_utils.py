@@ -26,18 +26,24 @@ class Dictionary(object):
 
     def add_word(self, word):
         print(word)
-        if word != UNK_TOKEN or word != PAD_TOKEN:
-            doc = NLP(word)[0]
-            if not doc._.hunspell_spell:
-                try:
-                    word = doc._.hunspell_suggest[0]
-                except SystemError:
-                    pass
-                print("Correction: {0}".format(word))
+        word = self.spellcheck(word)
         if word not in self.word2idx:
             self.idx2word.append(word)
             self.word2idx[word] = len(self.idx2word) - 1
         return self.word2idx[word]
+
+    def spellcheck(self, word):
+        if word != UNK_TOKEN or word != PAD_TOKEN:
+            doc = NLP(word)[0]
+            if not doc._.hunspell_spell:
+                try:
+                    word = doc._.hunspell_suggest[0].lower()
+                    if len(word.split()) > 1:
+                        word = word.replace(' ', '')
+                except SystemError or IndexError:
+                    pass
+                print("Correction: {0}".format(word))
+        return word
 
     def __len__(self):
         return len(self.idx2word)
@@ -48,9 +54,7 @@ class Dictionary(object):
         elif isinstance(a, list):
             return [self.idx2word[x] for x in a]
         elif isinstance(a, str):
-            doc = NLP(a)[0]
-            if not doc._.hunspell_spell:
-                a = doc._.hunspell_suggest[0]
+            a = self.spellcheck(a)
             if a not in self:
                 a = UNK_TOKEN
             return self.word2idx[a]
