@@ -139,6 +139,12 @@ parser.add_argument('--env', type=str, default='DMN-train',
 
 args = parser.parse_args()
 
+args_dict = vars(args)
+print('Argument list to program')
+print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
+                 for arg in args_dict]))
+print('\n\n')
+
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
