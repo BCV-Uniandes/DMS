@@ -40,7 +40,7 @@ class Dictionary(object):
                     word = doc._.hunspell_suggest[0].lower()
                     if len(word.split()) > 1:
                         word = word.replace(' ', '')
-                except SystemError or IndexError:
+                except:
                     pass
                 print("Correction: {0}".format(word))
         return word
