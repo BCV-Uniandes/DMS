@@ -8,11 +8,10 @@ import re
 import torch
 import spacy
 import codecs
-from spacy_hunspell import spaCyHunSpell
+import hunspell
 
-NLP = spacy.load('en_core_web_sm')
-HUNSPELL = spaCyHunSpell(NLP, 'linux')
-NLP.add_pipe(HUNSPELL)
+HUN = hunspell.HunSpell('/usr/share/hunspell/en_US.dic',
+                        '/usr/share/hunspell/en_US.aff')
 
 UNK_TOKEN = '<unk>'
 PAD_TOKEN = '<pad>'
@@ -33,10 +32,9 @@ class Dictionary(object):
 
     def spellcheck(self, word):
         if word != UNK_TOKEN and word != PAD_TOKEN:
-            doc = NLP(word)[0]
-            if not doc._.hunspell_spell:
+            if not HUN.spell(word):
                 try:
-                    word = doc._.hunspell_suggest[0].lower()
+                    word = HUN.suggest(word)[0].lower()
                     if len(word.split()) > 1:
                         word = word.replace(' ', '')
                 except:
