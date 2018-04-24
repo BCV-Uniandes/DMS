@@ -29,7 +29,11 @@ class Dictionary(object):
         if word != UNK_TOKEN or word != PAD_TOKEN:
             doc = NLP(word)[0]
             if not doc._.hunspell_spell:
-                word = doc._.hunspell_suggest[0]
+                try:
+                    word = doc._.hunspell_suggest[0]
+                except SystemError:
+                    pass
+                print("Correction: {0}".format(word))
         if word not in self.word2idx:
             self.idx2word.append(word)
             self.word2idx[word] = len(self.idx2word) - 1
