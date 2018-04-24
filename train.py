@@ -134,6 +134,8 @@ parser.add_argument('--langvis-freeze', action='store_true', default=False,
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
                     help='visdom URL endpoint')
+parser.add_argument('--env', type=str, default='DMN-train',
+                    help='visdom environment name')
 
 args = parser.parse_args()
 
@@ -215,6 +217,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze)
 
 if osp.exists(args.snapshot):
+    print('Loading state dict from: {0}'.format(args.snapshot))
     snapshot_dict = torch.load(args.snapshot)
     if args.old_weights:
         state = {}
@@ -235,19 +238,19 @@ if args.visdom is not None:
 
     print('Initializing Visdom frontend at: {0}:{1}'.format(
           args.visdom, port))
-    vis = VisdomWrapper(server=visdom_url.geturl(), port=port)
+    vis = VisdomWrapper(server=visdom_url.geturl(), port=port, env=args.env)
 
-    vis.init_line_plot('iteration_plt', xlabel='Iteration', ylabel='Loss',
-                       title='Current QSegNet Training Loss',
-                       legend=['Loss'])
-
-    vis.init_line_plot('epoch_plt', xlabel='Epoch', ylabel='Loss',
-                       title='Current QSegNet Epoch Loss',
-                       legend=['Loss'])
+    # vis.init_line_plot('iteration_plt', xlabel='Iteration', ylabel='Loss',
+    #                    title='Current QSegNet Training Loss',
+    #                    legend=['Loss'])
+    #
+    # vis.init_line_plot('epoch_plt', xlabel='Epoch', ylabel='Loss',
+    #                    title='Current QSegNet Epoch Loss',
+    #                    legend=['Loss'])
 
     if args.val is not None:
-        vis.init_line_plot('val_plt', xlabel='Iteration', ylabel='Loss',
-                           title='Current QSegNet Validation Loss',
+        vis.init_line_plot('val_plt', xlabel='Epoch', ylabel='IoU',
+                           title='Current Model IoU Value',
                            legend=['Loss'])
 
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
@@ -388,7 +391,7 @@ def compute_mask_IU(masks, target):
     return intersection, union
 
 
-def evaluate():
+def evaluate(epoch=0):
     net.train()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
@@ -487,21 +490,27 @@ def evaluate():
         time.time() - start_time))
     print('Maximum IoU: {:<15.13f} - Threshold: {:<15.13f}'.format(
         max_iou, score_thresh[max_idx]))
+
+    if args.visdom is not None:
+        vis.plot_line('val_plt',
+                      X=torch.ones((1, 1)).cpu() * epoch,
+                      Y=torch.Tensor([max_iou]).unsqueeze(0).cpu(),
+                      update='append')
     return max_iou
 
 
 if __name__ == '__main__':
-    print('Beginning training')
+    print('Train begins...')
     best_val_loss = None
     if args.eval_first:
-        evaluate()
+        evaluate(0)
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
             val_loss = train_loss
             if args.val is not None:
-                val_loss = 1 - evaluate()
+                val_loss = 1 - evaluate(epoch)
             scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
