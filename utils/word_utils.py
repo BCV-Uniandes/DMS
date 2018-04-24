@@ -6,7 +6,13 @@ Language-related data loading helper functions and class wrappers.
 
 import re
 import torch
+import spacy
 import codecs
+from spacy_hunspell import spaCyHunSpell
+
+NLP = spacy.load('en_core_web_sm')
+HUNSPELL = spaCyHunSpell(NLP, 'linux')
+NLP.add_pipe(HUNSPELL)
 
 UNK_TOKEN = '<unk>'
 PAD_TOKEN = '<pad>'
@@ -19,6 +25,9 @@ class Dictionary(object):
         self.idx2word = []
 
     def add_word(self, word):
+        doc = NLP(word)[0]
+        if not doc._.hunspell_spell:
+            word = doc._.hunspell_suggest[0]
         if word not in self.word2idx:
             self.idx2word.append(word)
             self.word2idx[word] = len(self.idx2word) - 1
@@ -33,6 +42,11 @@ class Dictionary(object):
         elif isinstance(a, list):
             return [self.idx2word[x] for x in a]
         elif isinstance(a, str):
+            doc = NLP(a)[0]
+            if not doc._.hunspell_spell:
+                a = doc._.hunspell_suggest[0]
+            if a not in self:
+                a = UNK_TOKEN
             return self.word2idx[a]
         else:
             raise TypeError("Query word/index argument must be int or str")
@@ -83,8 +97,6 @@ class Corpus(object):
         ids = torch.LongTensor(tokens)
         token = 0
         for word in words:
-            if word not in self.dictionary:
-                word = UNK_TOKEN
             ids[token] = self.dictionary[word]
             token += 1
 
