@@ -25,9 +25,10 @@ class Dictionary(object):
         self.idx2word = []
 
     def add_word(self, word):
-        doc = NLP(word)[0]
-        if not doc._.hunspell_spell:
-            word = doc._.hunspell_suggest[0]
+        if word != UNK_TOKEN or word != PAD_TOKEN:
+            doc = NLP(word)[0]
+            if not doc._.hunspell_spell:
+                word = doc._.hunspell_suggest[0]
         if word not in self.word2idx:
             self.idx2word.append(word)
             self.word2idx[word] = len(self.idx2word) - 1
