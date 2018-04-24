@@ -25,6 +25,7 @@ class Dictionary(object):
         self.idx2word = []
 
     def add_word(self, word):
+        print(word)
         if word != UNK_TOKEN or word != PAD_TOKEN:
             doc = NLP(word)[0]
             if not doc._.hunspell_spell:
