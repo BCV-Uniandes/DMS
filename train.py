@@ -282,9 +282,9 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
-        imgs.requires_grad_()
-        masks.requires_grad_()
-        words.requires_grad_()
+        imgs = imgs.requires_grad_()
+        masks = masks.requires_grad_()
+        words = words.requires_grad_()
 
         if args.cuda:
             imgs = imgs.cuda()
