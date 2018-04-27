@@ -179,7 +179,7 @@ parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
                     help='url used to set up distributed training')
 parser.add_argument('--dist-backend', default='gloo', type=str,
                     help='distributed backend')
-parser.add_argument('--dist-rank', default=0, type=int,
+parser.add_argument('--local_rank', default=0, type=int,
                     help='distributed node rank number identification')
 parser.add_argument('--world-size', default=1, type=int,
                     help='number of distributed processes')
@@ -192,6 +192,8 @@ parser.add_argument('--env', type=str, default='DMN-train',
 
 args = parser.parse_args()
 
+torch.cuda.set_device(args.local_rank)
+
 args_dict = vars(args)
 print('Argument list to program')
 print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
@@ -203,8 +205,7 @@ args.distributed = args.world_size > 1
 
 if args.distributed:
     print('Starting distribution node')
-    dist.init_process_group(args.dist_backend, init_method=args.dist_url,
-                            world_size=args.world_size, rank=args.dist_rank)
+    dist.init_process_group(args.dist_backend, init_method='env://')
     print('Done!')
 
 torch.manual_seed(args.seed)
@@ -299,7 +300,8 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
 if args.distributed:
     if args.cuda:
         net = net.cuda()
-    net = CustomDistributedDataParallel(net)
+    net = CustomDistributedDataParallel(net, device_ids=[args.local_rank],
+                                        output_device=args.local_rank)
 else:
     net = CustomDataParallel(net)
 
@@ -390,7 +392,8 @@ def train(epoch):
             if not args.distributed or GPUs > 1:
                 out_mask = out_mask.unsqueeze(0)
             out_mask = F.upsample(out_mask, size=(
-                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+                mask.size(-2), mask.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
             cur_loss = criterion(out_mask, mask)
             loss = cur_loss if loss is None else cur_loss + loss
         loss /= len(masks)
