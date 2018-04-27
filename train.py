@@ -283,7 +283,7 @@ def train(epoch):
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = imgs.requires_grad_()
-        masks = masks.requires_grad_()
+        masks = masks.requires_grad_().squeeze()
         words = words.requires_grad_()
 
         if args.cuda:
@@ -300,7 +300,7 @@ def train(epoch):
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear',
-            align_corners=True)
+            align_corners=True).squeeze()
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
         loss = criterion(out_masks, masks)
