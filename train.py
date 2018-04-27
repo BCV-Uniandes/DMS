@@ -387,7 +387,7 @@ def train(epoch):
         out_masks = net(imgs, words)
         loss = None
         for out_mask, mask in zip(out_masks, masks):
-            if not args.distributed or len(GPUs) > 1:
+            if not args.distributed or GPUs > 1:
                 out_mask = out_mask.unsqueeze(0)
             out_mask = F.upsample(out_mask, size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
