@@ -44,7 +44,7 @@ def gather_monkeypatch(outputs, target_device, dim=0):
     """
     def gather_map(outputs):
         out = outputs[0]
-        if isinstance(out, Variable):
+        if isinstance(out, torch.Tensor):
             return Gather.apply(target_device, dim, *outputs)
         if out is None:
             return None

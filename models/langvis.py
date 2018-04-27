@@ -306,20 +306,12 @@ class LangVisUpsample(nn.Module):
             vis = vis.detach()
             lang = lang.detach()
         out, features = self.langvis(vis, lang)
-<<<<<<< HEAD
-        if out is not None:
-            if self.langvis_freeze:
-                out = Variable(out.data)
-            if self.high_res:
-                out = self.upsample(out, features)
-        return [out]
-=======
+
         if self.langvis_freeze:
             out = out.data.requires_grad_()
         if self.high_res:
             out = self.upsample(out, features)
-        return out
->>>>>>> pytorch_0.4_migration
+        return [out]
 
     def load_state_dict(self, new_state):
         state = self.state_dict()
