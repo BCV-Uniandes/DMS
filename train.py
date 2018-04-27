@@ -16,8 +16,10 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
+import torch.distributed as dist
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
@@ -130,6 +132,14 @@ parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
 
+# Distributed settings
+parser.add_argument('--dist-backend', default='gloo', type=str,
+                    help='distributed backend')
+parser.add_argument('--local_rank', default=0, type=int,
+                    help='distributed node rank number identification')
+parser.add_argument('--world-size', default=1, type=int,
+                    help='number of distributed processes')
+
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
                     help='visdom URL endpoint')
@@ -145,6 +155,15 @@ print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
 print('\n\n')
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+if args.cuda:
+    torch.cuda.set_device(args.local_rank)
+
+args.distributed = args.world_size > 1
+
+if args.distributed:
+    print('Starting distribution node')
+    dist.init_process_group(args.dist_backend, init_method='env://')
+    print('Done!')
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -181,8 +200,17 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
-                          pin_memory=True, num_workers=args.workers)
+if args.distributed:
+    sampler = DistributedSampler(refer)
+else:
+    sampler = None
+
+
+train_loader = DataLoader(refer, batch_size=args.batch_size,
+                          shuffle=(sampler is None),
+                          sampler=sampler,
+                          pin_memory=True,
+                          num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -193,8 +221,13 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
+    val_sampler = None
+    if args.distributed:
+        val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            pin_memory=True, num_workers=args.workers)
+                            pin_memory=True, num_workers=args.workers,
+                            sampler=val_sampler)
+
 
 
 if not osp.exists(args.save_folder):
@@ -220,6 +253,12 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
+
+if args.distributed:
+    if args.cuda:
+        net = net.cuda()
+    net = nn.parallel.DistributedDataParallel(
+        net, device_ids=[args.local_rank], output_device=args.local_rank)
 
 if osp.exists(args.snapshot):
     print('Loading state dict from: {0}'.format(args.snapshot))
