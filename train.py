@@ -371,7 +371,7 @@ def train(epoch):
                 for img in imgs]
         masks = [mask.requires_grad_().squeeze() for mask in masks]
         words = [word.requires_grad_().unsqueeze(0).expand(
-                    word.size(0)) for word in words]
+                    GPUs, word.size(0)) for word in words]
 
         if args.cuda:
             imgs = [img.cuda() for img in imgs]
