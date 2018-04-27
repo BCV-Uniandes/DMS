@@ -10,7 +10,6 @@ import numpy as np
 from sru import SRU
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
 
@@ -218,7 +217,7 @@ class LangVisNet(nn.Module):
                 spatial_batch_val[0, :, h, w] = (
                     [xmin, ymin, xmax, ymax,
                      xctr, yctr, 1 / featmap_W, 1 / featmap_H])
-        return Variable(torch.from_numpy(spatial_batch_val)).cuda()
+        return torch.from_numpy(spatial_batch_val).cuda()
 
 
 class UpsamplingModule(nn.Module):
@@ -270,7 +269,7 @@ class UpsamplingModule(nn.Module):
                     features[i].size(-2), features[i].size(-1))):
                 x = F.upsample(
                     x, (features[i].size(-2), features[i].size(-1)),
-                    mode='bilinear')
+                    mode='bilinear', align_corners=True)
             x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
             i -= 1
@@ -307,12 +306,20 @@ class LangVisUpsample(nn.Module):
             vis = vis.detach()
             lang = lang.detach()
         out, features = self.langvis(vis, lang)
+<<<<<<< HEAD
         if out is not None:
             if self.langvis_freeze:
                 out = Variable(out.data)
             if self.high_res:
                 out = self.upsample(out, features)
         return [out]
+=======
+        if self.langvis_freeze:
+            out = out.data.requires_grad_()
+        if self.high_res:
+            out = self.upsample(out, features)
+        return out
+>>>>>>> pytorch_0.4_migration
 
     def load_state_dict(self, new_state):
         state = self.state_dict()

@@ -10,7 +10,6 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -209,20 +208,19 @@ def visualization():
         vis_imgs = [vis_imgs.squeeze().numpy() * 255,
                     masks.expand(
                         3, masks.size(0), masks.size(1)).numpy().copy() * 255]
-        imgs = Variable(imgs, volatile=True)
-        words = Variable(words, volatile=True)
-        if args.cuda:
-            imgs = imgs.cuda()
-            words = words.cuda()
-        out = net(imgs, words)
-        out = F.upsample(out, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        out = F.sigmoid(out)
-        out = out.data.cpu().unsqueeze(0).expand(
-            3, out.size(0), out.size(1)).numpy() * 255
-        vis_imgs.append(out)
-        vis.images(vis_imgs, env=args.env, opts={'caption': text})
-
+        with torch.no_grad():
+            if args.cuda:
+                imgs = imgs.cuda()
+                words = words.cuda()
+            out = net(imgs, words)
+            out = F.upsample(out, size=(
+                masks.size(-2), masks.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
+            out = F.sigmoid(out)
+            out = out.data.cpu().unsqueeze(0).expand(
+                3, out.size(0), out.size(1)).numpy() * 255
+            vis_imgs.append(out)
+            vis.images(vis_imgs, env=args.env, opts={'caption': text})
     print('Done')
 
 

@@ -9,7 +9,6 @@ import numpy as np
 from collections import Iterable
 
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 
 class ResizePad:
@@ -66,7 +65,7 @@ class CropResize:
         # resized_img = cv2.resize(img, (resized_w, resized_h))
         resized_img = F.upsample(
             img.unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
-            mode='bilinear')
+            mode='bilinear', align_corners=True)
 
         resized_img = resized_img.squeeze().unsqueeze(0)
 
@@ -88,8 +87,8 @@ class ResizeImage:
         resized_h = int(np.round(im_h * scale))
         resized_w = int(np.round(im_w * scale))
         out = F.upsample(
-            Variable(img).unsqueeze(0), size=(resized_h, resized_w),
-            mode='bilinear').squeeze().data
+            img.unsqueeze(0), size=(resized_h, resized_w),
+            mode='bilinear', align_corners=True).squeeze().data
         return out
 
 class ResizeAnnotation:
@@ -106,8 +105,8 @@ class ResizeAnnotation:
         resized_h = int(np.round(im_h * scale))
         resized_w = int(np.round(im_w * scale))
         out = F.upsample(
-            Variable(img).unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
-            mode='bilinear').squeeze().data
+            img.unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
+            mode='bilinear', align_corners=True).squeeze().data
         return out
 
 
