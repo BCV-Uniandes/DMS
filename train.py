@@ -14,9 +14,8 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import optim
-from torch.autograd import Variable
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
@@ -283,9 +282,9 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
-        imgs = Variable(imgs)
-        masks = Variable(masks.squeeze())
-        words = Variable(words)
+        imgs.requires_grad_()
+        masks.requires_grad_()
+        words.requires_grad_()
 
         if args.cuda:
             imgs = imgs.cuda()
@@ -307,16 +306,16 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        total_loss.update(loss.data[0], imgs.size(0))
-        epoch_loss_stats.update(loss.data[0], imgs.size(0))
-        # total_loss += loss.data[0]
+        total_loss.update(loss.item(), imgs.size(0))
+        epoch_loss_stats.update(loss.item(), imgs.size(0))
+        # total_loss += loss.item()
         # epoch_total_loss += total_loss
 
         if args.visdom is not None:
             cur_iter = batch_idx + (epoch - 1) * len(train_loader)
             vis.plot_line('iteration_plt',
                           X=torch.ones((1, 1)).cpu() * cur_iter,
-                          Y=torch.Tensor([loss.data[0]]).unsqueeze(0).cpu(),
+                          Y=torch.Tensor([loss.item()]).unsqueeze(0).cpu(),
                           update='append')
 
         if batch_idx % args.backup_iters == 0:
@@ -355,40 +354,6 @@ def train(epoch):
     return epoch_total_loss
 
 
-def validate(epoch):
-    net.eval()
-    epoch_total_loss = AverageMeter()
-    start_time = time.time()
-    for batch_idx, (imgs, masks, words) in enumerate(val_loader):
-        imgs = Variable(imgs, volatile=True)
-        masks = Variable(masks.squeeze(), volatile=True)
-        words = Variable(words, volatile=True)
-
-        if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
-            words = words.cuda()
-
-        out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        loss = criterion(out_masks, masks)
-        epoch_total_loss.update(loss.data[0], imgs.size(0))
-
-    epoch_total_loss = epoch_total_loss.avg
-    elapsed_time = time.time() - start_time
-    print('[{:5d}] Validation | elapsed time (ms) {:.6f} |'
-          ' loss {:.6f}'.format(
-              epoch, elapsed_time * 1000, epoch_total_loss))
-    if args.visdom is not None:
-        vis.plot_line('val_plt',
-                      X=torch.ones((1, 1)).cpu() * epoch,
-                      Y=torch.Tensor([epoch_total_loss]).unsqueeze(0).cpu(),
-                      update='append')
-
-    return epoch_total_loss
-
-
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
     temp = (masks * target)
@@ -416,18 +381,19 @@ def evaluate(epoch=0):
         # words = refer_val.tokenize_phrase(phrase)
         # h, w, _ = img.shape
         # img = input_transform(img)
-        imgs = Variable(img, volatile=True)
+        imgs = img
         mask = mask.squeeze()
-        words = Variable(phrase, volatile=True)
-
+        words = phrase
         if args.cuda:
             imgs = imgs.cuda()
             words = words.cuda()
             mask = mask.float().cuda()
-        out = net(imgs, words)
-        out = F.sigmoid(out)
-        out = F.upsample(out, size=(
-            mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+
+        with torch.no_grad():
+            out = net(imgs, words)
+            out = F.sigmoid(out)
+            out = F.upsample(out, size=(
+                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
         # out = out.squeeze().data.cpu().numpy()
         # out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)

@@ -9,7 +9,6 @@ import numpy as np
 from collections import Iterable
 
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 
 class ResizePad:
@@ -88,7 +87,7 @@ class ResizeImage:
         resized_h = int(np.round(im_h * scale))
         resized_w = int(np.round(im_w * scale))
         out = F.upsample(
-            Variable(img).unsqueeze(0), size=(resized_h, resized_w),
+            img.unsqueeze(0), size=(resized_h, resized_w),
             mode='bilinear').squeeze().data
         return out
 
@@ -106,7 +105,7 @@ class ResizeAnnotation:
         resized_h = int(np.round(im_h * scale))
         resized_w = int(np.round(im_w * scale))
         out = F.upsample(
-            Variable(img).unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
+            img.unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
             mode='bilinear').squeeze().data
         return out
 
