@@ -211,7 +211,7 @@ class LangVisNet(nn.Module):
                 spatial_batch_val[0, :, h, w] = (
                     [xmin, ymin, xmax, ymax,
                      xctr, yctr, 1 / featmap_W, 1 / featmap_H])
-        return torch.from_numpy(spatial_batch_val)
+        return torch.from_numpy(spatial_batch_val).cuda()
 
 
 class UpsamplingModule(nn.Module):
@@ -263,7 +263,7 @@ class UpsamplingModule(nn.Module):
                     features[i].size(-2), features[i].size(-1))):
                 x = F.upsample(
                     x, (features[i].size(-2), features[i].size(-1)),
-                    mode='bilinear')
+                    mode='bilinear', align_corners=True)
             x = torch.cat([x, features[i]], dim=1)
             x = conv(x)
             i -= 1

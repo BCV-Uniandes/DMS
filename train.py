@@ -299,7 +299,8 @@ def train(epoch):
         optimizer.zero_grad()
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
+            masks.size(-2), masks.size(-1)), mode='bilinear',
+            align_corners=True).squeeze()
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
         loss = criterion(out_masks, masks)
@@ -393,7 +394,8 @@ def evaluate(epoch=0):
             out = net(imgs, words)
             out = F.sigmoid(out)
             out = F.upsample(out, size=(
-                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+                mask.size(-2), mask.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
         # out = out.squeeze().data.cpu().numpy()
         # out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)

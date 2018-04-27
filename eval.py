@@ -209,7 +209,8 @@ def evaluate():
             out = net(imgs, words)
             out = F.sigmoid(out)
             out = F.upsample(out, size=(
-                mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
+                mask.size(-2), mask.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
         # out = out.squeeze().data.cpu().numpy()
         # out = out.squeeze()
         # out = (out >= score_thresh).astype(np.uint8)

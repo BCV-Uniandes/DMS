@@ -214,7 +214,8 @@ def visualization():
                 words = words.cuda()
             out = net(imgs, words)
             out = F.upsample(out, size=(
-                masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
+                masks.size(-2), masks.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
             out = F.sigmoid(out)
             out = out.data.cpu().unsqueeze(0).expand(
                 3, out.size(0), out.size(1)).numpy() * 255
