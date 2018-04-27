@@ -366,6 +366,7 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
+        print(imgs)
         imgs = [img.requires_grad_().unsqueeze(0).expand(
                     len(GPUs), img.size(0), img.size(1), img.size(2))
                 for img in imgs]
