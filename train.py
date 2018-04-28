@@ -131,6 +131,9 @@ parser.add_argument('--upsamp-amplification', default=32, type=int,
 parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
+parser.add_argument('--visual-freeze', action='store_true', default=False,
+                    help='freeze model backbone and train only '
+                         'DMN layers')
 
 # Distributed settings
 parser.add_argument('--dist-backend', default='gloo', type=str,
@@ -252,7 +255,8 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       upsampling_size=args.upsamp_size,
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
-                      langvis_freeze=args.langvis_freeze)
+                      langvis_freeze=args.langvis_freeze,
+                      visual_freeze=args.visual_freeze)
 
 if args.distributed:
     if args.cuda:

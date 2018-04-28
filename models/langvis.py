@@ -17,11 +17,13 @@ class LangVisNet(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False):
+                 extra=True, gpu_pair=None, high_res=False,
+                 visual_freeze=False):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
         self.num_filters = num_filters
+        self.visual_freeze = visual_freeze
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -78,7 +80,10 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        vis, base_features = self.base(vis)
+        with torch.set_grad_enabled(self.visual_freeze):
+            vis, base_features = self.base(vis)
+        vis = vis.requires_grad_()
+
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
 
@@ -278,13 +283,14 @@ class LangVisUpsample(nn.Module):
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
-                 upsampling_amplification=32, langvis_freeze=False):
+                 upsampling_amplification=32, langvis_freeze=False,
+                 visual_freeze=False):
         super().__init__()
         self.langvis = LangVisNet(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
-                                  extra, gpu_pair, high_res)
+                                  extra, gpu_pair, high_res, visual_freeze)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:
