@@ -14,24 +14,68 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import optim
-from torch.autograd import Variable
+import torch.nn.functional as F
+import torch.distributed as dist
 from torch.utils.data import DataLoader
+from torch.nn.parallel._functions import Gather
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
 from utils import AverageMeter
 from utils.losses import IoULoss
 from models import LangVisUpsample
-from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
+from referit_loader import ReferDataset, collate_fn
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
 import numpy as np
 from tqdm import tqdm
+
+GPUs = torch.cuda.device_count()
+
+def gather_monkeypatch(outputs, target_device, dim=0):
+    r"""
+    Gathers variables from different GPUs on a specified device
+      (-1 means the CPU).
+    """
+    def gather_map(outputs):
+        out = outputs[0]
+        if isinstance(out, torch.Tensor):
+            return Gather.apply(target_device, dim, *outputs)
+        if out is None:
+            return None
+        if isinstance(out, dict):
+            if not all((len(out) == len(d) for d in outputs)):
+                raise ValueError('All dicts must have the same number of keys')
+            return type(out)(((k, gather_map([d[k] for d in outputs]))
+                              for k in out))
+        if isinstance(out, list):
+            ret = type(out)((gather_map(v[0]) for v in outputs
+                             if v[0] is not None))
+            return ret
+        return type(out)(map(gather_map, zip(*outputs)))
+
+    # Recursive function calls like this create reference cycles.
+    # Setting the function to None clears the refcycle.
+    try:
+        return gather_map(outputs)
+    finally:
+        gather_map = None
+
+
+class CustomDataParallel(nn.DataParallel):
+    def gather(self, outputs, output_device):
+        return gather_monkeypatch(outputs, output_device, dim=self.dim)
+
+
+class CustomDistributedDataParallel(nn.parallel.DistributedDataParallel):
+    def gather(self, outputs, output_device):
+        return gather_monkeypatch(outputs, output_device, dim=self.dim)
+
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -131,6 +175,15 @@ parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
 
+parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
+                    help='url used to set up distributed training')
+parser.add_argument('--dist-backend', default='gloo', type=str,
+                    help='distributed backend')
+parser.add_argument('--local_rank', default=0, type=int,
+                    help='distributed node rank number identification')
+parser.add_argument('--world-size', default=1, type=int,
+                    help='number of distributed processes')
+
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
                     help='visdom URL endpoint')
@@ -139,6 +192,8 @@ parser.add_argument('--env', type=str, default='DMN-train',
 
 args = parser.parse_args()
 
+torch.cuda.set_device(args.local_rank)
+
 args_dict = vars(args)
 print('Argument list to program')
 print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
@@ -146,6 +201,12 @@ print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
 print('\n\n')
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.distributed = args.world_size > 1
+
+if args.distributed:
+    print('Starting distribution node')
+    dist.init_process_group(args.dist_backend, init_method='env://')
+    print('Done!')
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -172,6 +233,7 @@ if args.high_res:
         # ToTensor()
     ])
 
+
 if args.batch_size == 1:
     args.time = -1
 
@@ -182,8 +244,17 @@ refer = ReferDataset(data_root=args.data,
                      annotation_transform=target_transform,
                      max_query_len=args.time)
 
-train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
-                          pin_memory=True, num_workers=args.workers)
+if args.distributed:
+    sampler = DistributedSampler(refer)
+else:
+    sampler = None
+
+train_loader = DataLoader(refer, batch_size=args.batch_size,
+                          shuffle=(sampler is None),
+                          sampler=sampler,
+                          pin_memory=True,
+                          collate_fn=collate_fn,
+                          num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -194,8 +265,12 @@ if args.val is not None:
                              transform=input_transform,
                              annotation_transform=target_transform,
                              max_query_len=args.time)
+    val_sampler = None
+    if args.distributed:
+        val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            pin_memory=True, num_workers=args.workers)
+                            collate_fn=collate_fn, pin_memory=True,
+                            num_workers=args.workers, sampler=val_sampler)
 
 
 if not osp.exists(args.save_folder):
@@ -221,6 +296,14 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       gpu_pair=args.gpu_pair,
                       upsampling_amplification=args.upsamp_amplification,
                       langvis_freeze=args.langvis_freeze)
+
+if args.distributed:
+    if args.cuda:
+        net = net.cuda()
+    net = CustomDistributedDataParallel(net, device_ids=[args.local_rank],
+                                        output_device=args.local_rank)
+else:
+    net = CustomDataParallel(net)
 
 if osp.exists(args.snapshot):
     print('Loading state dict from: {0}'.format(args.snapshot))
@@ -276,6 +359,8 @@ if args.iou_loss:
 
 
 def train(epoch):
+    if args.distributed:
+        sampler.set_epoch(epoch)
     net.train()
     total_loss = AverageMeter()
     # total_loss = 0
@@ -283,14 +368,17 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
-        imgs = Variable(imgs)
-        masks = Variable(masks.squeeze())
-        words = Variable(words)
+        imgs = [img.requires_grad_().unsqueeze(0).expand(
+                    GPUs, img.size(0), img.size(1), img.size(2))
+                for img in imgs]
+        masks = [mask.requires_grad_().squeeze() for mask in masks]
+        words = [word.requires_grad_().unsqueeze(0).expand(
+                    GPUs, word.size(0)) for word in words]
 
         if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
-            words = words.cuda()
+            imgs = [img.cuda() for img in imgs]
+            masks = [mask.cuda() for mask in masks]
+            words = [word.cuda() for word in words]
 
         if args.cuda and args.gpu_pair is not None:
             imgs = imgs.cuda(2*args.gpu_pair)
@@ -299,16 +387,21 @@ def train(epoch):
 
         optimizer.zero_grad()
         out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        if args.gpu_pair is not None:
-            masks = masks.cuda(2*args.gpu_pair + 1)
-        loss = criterion(out_masks, masks)
+        loss = None
+        for out_mask, mask in zip(out_masks, masks):
+            if not args.distributed or GPUs > 1:
+                out_mask = out_mask.unsqueeze(0)
+            out_mask = F.upsample(out_mask, size=(
+                mask.size(-2), mask.size(-1)), mode='bilinear',
+                align_corners=True).squeeze()
+            cur_loss = criterion(out_mask, mask)
+            loss = cur_loss if loss is None else cur_loss + loss
+        loss /= len(masks)
         loss.backward()
         optimizer.step()
 
-        total_loss.update(loss.data[0], imgs.size(0))
-        epoch_loss_stats.update(loss.data[0], imgs.size(0))
+        total_loss.update(loss.data[0], len(imgs))
+        epoch_loss_stats.update(loss.data[0], len(imgs))
         # total_loss += loss.data[0]
         # epoch_total_loss += total_loss
 
@@ -316,7 +409,7 @@ def train(epoch):
             cur_iter = batch_idx + (epoch - 1) * len(train_loader)
             vis.plot_line('iteration_plt',
                           X=torch.ones((1, 1)).cpu() * cur_iter,
-                          Y=torch.Tensor([loss.data[0]]).unsqueeze(0).cpu(),
+                          Y=torch.Tensor([loss.item()]).unsqueeze(0).cpu(),
                           update='append')
 
         if batch_idx % args.backup_iters == 0:
@@ -355,40 +448,6 @@ def train(epoch):
     return epoch_total_loss
 
 
-def validate(epoch):
-    net.eval()
-    epoch_total_loss = AverageMeter()
-    start_time = time.time()
-    for batch_idx, (imgs, masks, words) in enumerate(val_loader):
-        imgs = Variable(imgs, volatile=True)
-        masks = Variable(masks.squeeze(), volatile=True)
-        words = Variable(words, volatile=True)
-
-        if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
-            words = words.cuda()
-
-        out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        loss = criterion(out_masks, masks)
-        epoch_total_loss.update(loss.data[0], imgs.size(0))
-
-    epoch_total_loss = epoch_total_loss.avg
-    elapsed_time = time.time() - start_time
-    print('[{:5d}] Validation | elapsed time (ms) {:.6f} |'
-          ' loss {:.6f}'.format(
-              epoch, elapsed_time * 1000, epoch_total_loss))
-    if args.visdom is not None:
-        vis.plot_line('val_plt',
-                      X=torch.ones((1, 1)).cpu() * epoch,
-                      Y=torch.Tensor([epoch_total_loss]).unsqueeze(0).cpu(),
-                      update='append')
-
-    return epoch_total_loss
-
-
 def compute_mask_IU(masks, target):
     assert(target.shape[-2:] == masks.shape[-2:])
     temp = (masks * target)
@@ -410,64 +469,66 @@ def evaluate(epoch=0):
 
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
+    i = 0
     start_time = time.time()
-    for img, mask, phrase in tqdm(val_loader, dynamic_ncols=True):
+    for imgs, masks, phrases in tqdm(val_loader, dynamic_ncols=True):
         # img, mask, phrase = refer_val.pull_item(i)
         # words = refer_val.tokenize_phrase(phrase)
         # h, w, _ = img.shape
         # img = input_transform(img)
-        imgs = Variable(img, volatile=True)
-        mask = mask.squeeze()
-        words = Variable(phrase, volatile=True)
-
+        # imgs = img
+        masks = [mask.float().squeeze() for mask in masks]
+        words = phrases
         if args.cuda:
-            imgs = imgs.cuda()
-            words = words.cuda()
-            mask = mask.float().cuda()
-        out = net(imgs, words)
-        out = F.sigmoid(out)
-        out = F.upsample(out, size=(
-            mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
-        # out = out.squeeze().data.cpu().numpy()
-        # out = out.squeeze()
-        # out = (out >= score_thresh).astype(np.uint8)
-        # out = target_transform(out, (h, w))
+            imgs = [img.cuda() for img in imgs]
+            words = [word.cuda() for word in words]
+            masks = [mask.cuda() for mask in masks]
 
-        inter = torch.zeros(len(score_thresh))
-        union = torch.zeros(len(score_thresh))
-        for idx, thresh in enumerate(score_thresh):
-            thresholded_out = (out > thresh).float().data
-            try:
-                inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
-            except AssertionError as e:
-                inter[idx] = 0
-                union[idx] = mask.sum()
-                # continue
+        with torch.no_grad():
+            out_masks = net(imgs, words)
+            for out, mask in zip(out_masks, masks):
+                out = F.sigmoid(out)
+                out = F.upsample(out, size=(
+                    mask.size(-2), mask.size(-1)), mode='bilinear',
+                    align_corners=True).squeeze()
 
-        cum_I += inter
-        cum_U += union
-        this_iou = inter / union
+                inter = torch.zeros(len(score_thresh))
+                union = torch.zeros(len(score_thresh))
+                for idx, thresh in enumerate(score_thresh):
+                    thresholded_out = (out > thresh).float().data
+                    try:
+                        inter[idx], union[idx] = compute_mask_IU(
+                            thresholded_out, mask)
+                    except AssertionError as e:
+                        inter[idx] = 0
+                        union[idx] = mask.sum()
+                        # continue
 
-        for idx, seg_iou in enumerate(eval_seg_iou_list):
-            for jdx in range(len(score_thresh)):
-                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
+                cum_I += inter
+                cum_U += union
+                this_iou = inter / union
 
-        seg_total += 1
+                for idx, seg_iou in enumerate(eval_seg_iou_list):
+                    for jdx in range(len(score_thresh)):
+                        seg_correct[idx, jdx] += (
+                            this_iou[jdx] >= seg_iou).float()
 
-        if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
-            temp_cum_iou = cum_I / cum_U
-            _, which = torch.max(temp_cum_iou,0)
-            which = which.numpy()
-            print(' ')
-            print('Accumulated IoUs at different thresholds:')
-            print('+' + '-' * 34 + '+')
-            print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
-            print('+' + '-' * 34 + '+')
-            for idx, thresh in enumerate(score_thresh):
-                this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                    if idx == which else '| {:<15.3E}| {:<15.8f} |')
-                print(this_string.format(thresh, temp_cum_iou[idx]))
-            print('+' + '-' * 34 + '+')
+                seg_total += 1
+
+                if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
+                    temp_cum_iou = cum_I / cum_U
+                    _, which = torch.max(temp_cum_iou,0)
+                    which = which.numpy()
+                    print(' ')
+                    print('Accumulated IoUs at different thresholds:')
+                    print('+' + '-' * 34 + '+')
+                    print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+                    print('+' + '-' * 34 + '+')
+                    for idx, thresh in enumerate(score_thresh):
+                        this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                            if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                        print(this_string.format(thresh, temp_cum_iou[idx]))
+                    print('+' + '-' * 34 + '+')
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
@@ -511,6 +572,8 @@ if __name__ == '__main__':
     if args.eval_first:
         evaluate(0)
     try:
+        if args.eval_first:
+            evaluate()
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
             train_loss = train(epoch)
