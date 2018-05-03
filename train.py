@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -312,14 +312,14 @@ if args.visdom is not None:
 # optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
 optimizer = optim.YFOptimizer(net.parameters())
 
-scheduler = ReduceLROnPlateau(
-    optimizer._optimizer, patience=args.patience)
+# scheduler = ReduceLROnPlateau(
+    # optimizer._optimizer, patience=args.patience)
 
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
 
-scheduler.step(args.start_epoch)
+# scheduler.step(args.start_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
@@ -546,7 +546,7 @@ if __name__ == '__main__':
             val_loss = train_loss
             if args.val is not None:
                 val_loss = 1 - evaluate(epoch)
-            scheduler.step(val_loss)
+            # scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
                   '| epoch loss {:.6f} |'.format(
