@@ -398,10 +398,9 @@ def train(epoch):
             elapsed_time = time.time() - start_time
             # cur_loss = total_loss / args.log_interval
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
-                  ' loss {:.6f} | lr {:.7f}'.format(
+                  ' loss {:.6f} '.format(
                       epoch, batch_idx, len(train_loader),
-                      elapsed_time * 1000, total_loss.avg,
-                      optimizer.param_groups[0]['lr']))
+                      elapsed_time * 1000, total_loss.avg))
             total_loss.reset()
 
         # total_loss = 0
