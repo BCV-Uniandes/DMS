@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
-from torch import optim
+# from torch import optim
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data import DataLoader
@@ -23,6 +23,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
+import optim
 import parallel
 from utils import AverageMeter
 from utils.losses import IoULoss
@@ -308,7 +309,8 @@ if args.visdom is not None:
                            title='Current Model IoU Value',
                            legend=['Loss'])
 
-optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
+# optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
+optimizer = optim.YFOptimizer(net.parameters())
 
 scheduler = ReduceLROnPlateau(
     optimizer, patience=args.patience)
