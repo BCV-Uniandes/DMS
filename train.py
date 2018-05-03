@@ -308,7 +308,7 @@ if args.visdom is not None:
                            title='Current Model IoU Value',
                            legend=['Loss'])
 
-optimizer = optim.Adam(net.parameters(), lr=args.lr)
+optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
 
 scheduler = ReduceLROnPlateau(
     optimizer, patience=args.patience)
