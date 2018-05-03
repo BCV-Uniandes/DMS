@@ -313,7 +313,7 @@ if args.visdom is not None:
 optimizer = optim.YFOptimizer(net.parameters())
 
 scheduler = ReduceLROnPlateau(
-    optimizer, patience=args.patience)
+    optimizer._optimizer, patience=args.patience)
 
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
