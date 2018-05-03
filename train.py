@@ -332,6 +332,7 @@ def train(epoch):
     # epoch_total_loss = 0
     start_time = time.time()
     loss = 0
+    count = 0
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = imgs.requires_grad_()
         masks = masks.requires_grad_().squeeze()
@@ -357,11 +358,14 @@ def train(epoch):
 
         current_loss = criterion(out_masks, masks)
         loss += current_loss
+        count += 1
         if (batch_idx % args.accum_iters == 0 or
             (batch_idx + args.accum_iters) >= len(train_loader)):
+            loss = loss / count
             loss.backward(retain_graph=True)
             optimizer.step()
             loss = 0
+            count = 0
 
         total_loss.update(current_loss.item(), imgs.size(0))
         epoch_loss_stats.update(current_loss.item(), imgs.size(0))
