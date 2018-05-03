@@ -361,6 +361,7 @@ def train(epoch):
             (batch_idx + args.accum_iters) >= len(train_loader)):
             loss.backward(retain_graph=True)
             optimizer.step()
+            loss = 0
 
         total_loss.update(current_loss.item(), imgs.size(0))
         epoch_loss_stats.update(current_loss.item(), imgs.size(0))
