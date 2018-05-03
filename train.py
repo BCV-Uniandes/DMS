@@ -14,16 +14,15 @@ from urllib.parse import urlparse
 # PyTorch imports
 import torch
 import torch.nn as nn
-# from torch import optim
+from torch import optim
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-# from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-import optim
 import parallel
 from utils import AverageMeter
 from utils.losses import IoULoss
@@ -309,18 +308,16 @@ if args.visdom is not None:
                            title='Current Model IoU Value',
                            legend=['Loss'])
 
-# optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
-optimizer = optim.YFOptimizer(net.parameters(),
-    clip_thresh=None, adapt_clip=False)
+optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
 
-# scheduler = ReduceLROnPlateau(
-    # optimizer._optimizer, patience=args.patience)
+scheduler = ReduceLROnPlateau(
+    optimizer, patience=args.patience)
 
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
 
-# scheduler.step(args.start_epoch)
+scheduler.step(args.start_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
@@ -399,9 +396,10 @@ def train(epoch):
             elapsed_time = time.time() - start_time
             # cur_loss = total_loss / args.log_interval
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
-                  ' loss {:.6f} '.format(
+                  ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
-                      elapsed_time * 1000, total_loss.avg))
+                      elapsed_time * 1000, total_loss.avg,
+                      optimizer.param_groups[0]['lr']))
             total_loss.reset()
 
         # total_loss = 0
@@ -547,7 +545,7 @@ if __name__ == '__main__':
             val_loss = train_loss
             if args.val is not None:
                 val_loss = 1 - evaluate(epoch)
-            # scheduler.step(val_loss)
+            scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
                   '| epoch loss {:.6f} |'.format(
