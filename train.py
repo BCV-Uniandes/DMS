@@ -146,6 +146,8 @@ parser.add_argument('--world-size', default=1, type=int,
 parser.add_argument('--accum-iters', default=100, type=int,
                     help='number of gradient accumulated iterations to wait '
                          'before update')
+parser.add_argument('--pin-memory', action='store_true', default=False,
+                    help='enable DataLoader CUDA memory pinning')
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
@@ -216,7 +218,7 @@ else:
 train_loader = DataLoader(refer, batch_size=args.batch_size,
                           shuffle=(sampler is None),
                           sampler=sampler,
-                          pin_memory=True,
+                          pin_memory=args.pin_memory,
                           num_workers=args.workers)
 
 start_epoch = args.start_epoch
@@ -232,7 +234,8 @@ if args.val is not None:
     if args.distributed:
         val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            pin_memory=True, num_workers=args.workers,
+                            pin_memory=args.pin_memory,
+                            num_workers=args.workers,
                             sampler=val_sampler)
 
 
