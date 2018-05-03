@@ -308,8 +308,8 @@ if args.visdom is not None:
                            title='Current Model IoU Value',
                            legend=['Loss'])
 
-# optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-6, amsgrad=True)
-optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
+optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
+# optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
 
 scheduler = ReduceLROnPlateau(
     optimizer, patience=args.patience)
@@ -359,9 +359,9 @@ def train(epoch):
 
         current_loss = criterion(out_masks, masks)
         loss += (current_loss / args.accum_iters)
-        # count += 1
+        count += 1
         if (batch_idx % args.accum_iters == 0 or
-            (batch_idx + args.accum_iters) >= len(train_loader)):
+            batch_idx  == len(train_loader) - 1):
             # loss = loss / count
             loss.backward(retain_graph=True)
             optimizer.step()
