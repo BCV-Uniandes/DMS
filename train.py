@@ -331,6 +331,7 @@ def train(epoch):
     epoch_loss_stats = AverageMeter()
     # epoch_total_loss = 0
     start_time = time.time()
+    loss = 0
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = imgs.requires_grad_()
         masks = masks.requires_grad_().squeeze()
@@ -353,12 +354,16 @@ def train(epoch):
             align_corners=True).squeeze()
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
-        loss = criterion(out_masks, masks)
-        loss.backward()
-        optimizer.step()
 
-        total_loss.update(loss.item(), imgs.size(0))
-        epoch_loss_stats.update(loss.item(), imgs.size(0))
+        current_loss = criterion(out_masks, masks)
+        loss += current_loss
+        if (batch_idx % args.accum_iters == 0 or
+            (batch_idx + args.accum_iters) >= len(train_loader)):
+            loss.backward()
+            optimizer.step()
+
+        total_loss.update(current_loss.item(), imgs.size(0))
+        epoch_loss_stats.update(current_loss.item(), imgs.size(0))
         # total_loss += loss.item()
         # epoch_total_loss += total_loss
 
