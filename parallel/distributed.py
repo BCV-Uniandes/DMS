@@ -298,7 +298,6 @@ class DistributedDataParallel(Module):
 
         def reduction_fn_nccl():
             # This function only needs to be called once
-            print("Call!")
             if not self.need_reduction:
                 return
 
