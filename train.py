@@ -310,7 +310,8 @@ if args.visdom is not None:
                            legend=['Loss'])
 
 # optimizer = optim.Adam(net.parameters(), lr=args.lr, eps=1e-3, amsgrad=True)
-optimizer = optim.YFOptimizer(net.parameters())
+optimizer = optim.YFOptimizer(net.parameters(),
+    clip_thresh=None, adapt_clip=False)
 
 # scheduler = ReduceLROnPlateau(
     # optimizer._optimizer, patience=args.patience)
