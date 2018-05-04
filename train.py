@@ -57,6 +57,8 @@ parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
 parser.add_argument('--eval-first', default=False, action='store_true',
                     help='evaluate model weights before training')
+parser.add_argument('--eval-mode', default=False, action='store_true',
+                    help='turn on eval mode during model evaluation')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 
@@ -425,7 +427,8 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate(epoch=0):
-    net.train()
+    if args.eval_mode:
+        net.eval()
     score_thresh = np.concatenate([# [0],
                                    # np.logspace(start=-16, stop=-2, num=10,
                                    #             endpoint=True),
