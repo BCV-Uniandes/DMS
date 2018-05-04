@@ -92,6 +92,9 @@ parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 parser.add_argument('--gpu-pair', type=int, default=None,
                     help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
+parser.add_argument("--clip_grad", type=float, default=5,
+                    help='gradient clipping value')
+
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -365,6 +368,7 @@ def train(epoch):
         if (batch_idx % args.accum_iters == 0 or
             batch_idx  == len(train_loader) - 1):
             # loss = loss / count
+            nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
             loss.backward(retain_graph=True)
             optimizer.step()
             loss = 0
