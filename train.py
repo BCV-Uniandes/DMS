@@ -370,7 +370,7 @@ def train(epoch):
             # loss = loss / count
             loss.backward(retain_graph=True)
             if args.clip_grad > 0:
-                nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
+                nn.utils.clip_grad_norm_(net.parameters(), args.clip_grad)
             optimizer.step()
             loss = 0
             count = 0
