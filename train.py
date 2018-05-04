@@ -368,8 +368,8 @@ def train(epoch):
         if (batch_idx % args.accum_iters == 0 or
             batch_idx  == len(train_loader) - 1):
             # loss = loss / count
-            nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
             loss.backward(retain_graph=True)
+            nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
             optimizer.step()
             loss = 0
             count = 0
