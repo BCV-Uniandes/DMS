@@ -267,13 +267,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze,
                       visual_freeze=args.visual_freeze)
 
-if args.distributed:
-    if args.cuda:
-        net = net.cuda()
-    net = parallel.DistributedDataParallel(
-        net, device_ids=[args.local_rank], output_device=args.local_rank)
-
-if osp.exists(args.snapshot):
+if osp.exists(args.snapshot) and args.local_rank == 0:
     print('Loading state dict from: {0}'.format(args.snapshot))
     snapshot_dict = torch.load(args.snapshot)
     if args.old_weights:
@@ -282,6 +276,12 @@ if osp.exists(args.snapshot):
             state['langvis.' + weight_name] = snapshot_dict[weight_name]
         snapshot_dict = state
     net.load_state_dict(snapshot_dict)
+
+if args.distributed:
+    if args.cuda:
+        net = net.cuda()
+    net = parallel.DistributedDataParallel(
+        net, device_ids=[args.local_rank], output_device=args.local_rank)
 
 if args.cuda:
     net.cuda()
@@ -382,7 +382,7 @@ def train(epoch):
                           Y=torch.Tensor([loss.item()]).unsqueeze(0).cpu(),
                           update='append')
 
-        if batch_idx % args.backup_iters == 0:
+        if batch_idx % args.backup_iters == 0 and args.local_rank == 0:
             filename = 'dmn_{0}_{1}_snapshot.pth'.format(
                 args.dataset, args.split)
             filename = osp.join(args.save_folder, filename)
@@ -555,7 +555,8 @@ if __name__ == '__main__':
                   '| epoch loss {:.6f} |'.format(
                       epoch, time.time() - epoch_start_time, train_loss))
             print('-' * 89)
-            if best_val_loss is None or val_loss < best_val_loss:
+            if args.local_rank == 0 and (
+                best_val_loss is None or val_loss < best_val_loss):
                 best_val_loss = val_loss
                 filename = osp.join(args.save_folder, 'dmn_best_weights.pth')
                 torch.save(net.state_dict(), filename)
