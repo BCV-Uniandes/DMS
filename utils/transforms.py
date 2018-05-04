@@ -10,6 +10,7 @@ from collections import Iterable
 
 import torch.nn.functional as F
 
+cv2.setNumThreads(0)
 
 class ResizePad:
     """
