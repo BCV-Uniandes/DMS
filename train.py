@@ -316,7 +316,7 @@ optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
 scheduler = ReduceLROnPlateau(
     optimizer, patience=args.patience)
 
-if osp.exists(args.optim_snapshot):
+if osp.exists(args.optim_snapshot) and args.local_rank == 0:
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
 
@@ -382,7 +382,7 @@ def train(epoch):
                           Y=torch.Tensor([loss.item()]).unsqueeze(0).cpu(),
                           update='append')
 
-        if batch_idx % args.backup_iters == 0 and args.local_rank == 0:
+        if (batch_idx % args.backup_iters == 0) and args.local_rank == 0:
             filename = 'dmn_{0}_{1}_snapshot.pth'.format(
                 args.dataset, args.split)
             filename = osp.join(args.save_folder, filename)
@@ -541,7 +541,7 @@ if __name__ == '__main__':
     print('Train begins...')
     best_val_loss = None
     if args.eval_first:
-        evaluate(0)
+        best_val_loss = 1 - evaluate(0)
     try:
         for epoch in range(start_epoch, args.epochs + 1):
             epoch_start_time = time.time()
