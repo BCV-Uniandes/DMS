@@ -369,7 +369,8 @@ def train(epoch):
             batch_idx  == len(train_loader) - 1):
             # loss = loss / count
             loss.backward(retain_graph=True)
-            nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
+            if args.clip_grad > 0:
+                nn.utils.clip_grad_norm(net.parameters(), args.clip_grad)
             optimizer.step()
             loss = 0
             count = 0
