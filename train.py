@@ -459,7 +459,7 @@ def evaluate(epoch=0):
 
         for idx, seg_iou in enumerate(eval_seg_iou_list):
             for jdx in range(len(score_thresh)):
-                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou)
+                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou).float()
 
         seg_total += 1
 
