@@ -380,7 +380,6 @@ def train(epoch):
             masks = masks.cuda(2*args.gpu_pair)
             words = words.cuda(2*args.gpu_pair)
 
-        optimizer.zero_grad()
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear',
@@ -393,16 +392,17 @@ def train(epoch):
         epoch_loss_stats.update(current_loss.item(), imgs.size(0))
 
         current_loss = (current_loss / args.accum_iters)
-        current_loss.backward()
+        # current_loss.backward()
         loss += current_loss
         count += 1
         if (batch_idx % args.accum_iters == 0 or
             batch_idx  == len(train_loader) - 1):
             # loss = loss / count
-            # loss.backward(retain_graph=True)
+            loss.backward(retain_graph=True)
             if args.clip_grad > 0:
                 nn.utils.clip_grad_norm_(net.parameters(), args.clip_grad)
             optimizer.step()
+            optimizer.zero_grad()
             loss = 0
             count = 0
 
@@ -437,7 +437,7 @@ def train(epoch):
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
                       elapsed_time * 1000, total_loss.avg,
-                      lr_report()))
+                      lr_report(optimizer)))
             total_loss.reset()
 
         # total_loss = 0
