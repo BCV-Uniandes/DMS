@@ -392,12 +392,12 @@ def train(epoch):
         epoch_loss_stats.update(current_loss.item(), imgs.size(0))
 
         current_loss = (current_loss / args.accum_iters)
-        current_loss.backward()
+        # current_loss.backward()
         loss += current_loss
         if (batch_idx % args.accum_iters == 0 or
             batch_idx  == len(train_loader) - 1):
             # loss = loss / count
-            # loss.backward(retain_graph=True)
+            loss.backward()
             if args.clip_grad > 0:
                 nn.utils.clip_grad_norm_(net.parameters(), args.clip_grad)
             optimizer.step()
