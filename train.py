@@ -18,7 +18,7 @@ from torch import optim
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import Compose, ToTensor, Normalize
 
@@ -26,6 +26,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 import parallel
 from utils import AverageMeter
 from utils.losses import IoULoss
+from optimizers import YFOptimizer
 from models import LangVisUpsample
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
@@ -86,13 +87,16 @@ parser.add_argument('--start-epoch', type=int, default=1,
 parser.add_argument('--optim-snapshot', type=str,
                     default='weights/qsegnet_optim.pth',
                     help='path to optimizer state snapshot')
+parser.add_argument('--optimizer', type=str,
+                    default='adam',
+                    help='name of the optimizer to use')
 parser.add_argument('--old-weights', action='store_true', default=False,
                     help='load LangVisNet weights on a LangVisUpsample module')
 parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 parser.add_argument('--gpu-pair', type=int, default=None,
                     help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
-parser.add_argument("--clip_grad", type=float, default=5,
+parser.add_argument("--clip-grad", type=float, default=-1,
                     help='gradient clipping value')
 
 
@@ -313,17 +317,39 @@ if args.visdom is not None:
                            title='Current Model IoU Value',
                            legend=['Loss'])
 
-optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
+
+def optimizer_wrapper(Optim, **kwargs):
+    def init_func(net):
+        return Optim(net.parameters(), **kwargs)
+    return init_func
+
+optimizers = {
+    "adam": (optimizer_wrapper(optim.Adam, lr=args.lr, amsgrad=True),
+             lambda optim: optim.param_groups[0]['lr']),
+    "sgd": (optimizer_wrapper(optim.SGD, lr=args.lr, momentum=0.9),
+            lambda optim: optim.param_groups[0]['lr']),
+    "yellowfin": (optimizer_wrapper(
+        YFOptimizer, lr=args.lr, sparsity_debias=True),
+        lambda optim: optim._lr)
+}
+
+if args.optimizer not in optimizers:
+    args.optimizer = 'adam'
+    print("{0} not defined in available optimizer list, fallback to Adam")
+
+optimizer, lr_report = optimizers[args.optimizer]
+optimizer = optimizer(net)
+# optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
 # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
 
-scheduler = ReduceLROnPlateau(
-    optimizer, patience=args.patience)
+# scheduler = ReduceLROnPlateau(
+    # optimizer, patience=args.patience)
 
 if osp.exists(args.optim_snapshot) and args.local_rank == 0:
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
 
-scheduler.step(args.start_epoch)
+# scheduler.step(args.start_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
 if args.iou_loss:
@@ -407,7 +433,7 @@ def train(epoch):
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
                       elapsed_time * 1000, total_loss.avg,
-                      optimizer.param_groups[0]['lr']))
+                      lr_report()))
             total_loss.reset()
 
         # total_loss = 0
@@ -554,7 +580,7 @@ if __name__ == '__main__':
             val_loss = train_loss
             if args.val is not None:
                 val_loss = 1 - evaluate(epoch)
-            scheduler.step(val_loss)
+            # scheduler.step(val_loss)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s '
                   '| epoch loss {:.6f} |'.format(
