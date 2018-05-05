@@ -391,12 +391,12 @@ def train(epoch):
         total_loss.update(current_loss.item(), imgs.size(0))
         epoch_loss_stats.update(current_loss.item(), imgs.size(0))
 
-        current_loss = (current_loss / args.accum_iters)
+        # current_loss = (current_loss / args.accum_iters)
         # current_loss.backward()
         loss += current_loss
         if (batch_idx % args.accum_iters == 0 or
             batch_idx  == len(train_loader) - 1):
-            # loss = loss / count
+            loss = loss / args.accum_iters
             loss.backward()
             if args.clip_grad > 0:
                 nn.utils.clip_grad_norm_(net.parameters(), args.clip_grad)

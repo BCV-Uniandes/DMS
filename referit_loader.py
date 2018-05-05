@@ -193,6 +193,7 @@ class ReferDataset(data.Dataset):
         torch.save(split_dataset, osp.join(dataset_folder, output_file))
 
     def pull_item(self, idx):
+        cv2.setNumThreads(0)
         img_file, mask_file, phrase = self.images[idx]
 
         img_path = osp.join(self.im_dir, img_file)
