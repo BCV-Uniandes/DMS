@@ -88,6 +88,9 @@ parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
 parser.add_argument('--gpu-pair', type=int, default=None,
                     help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
+parser.add_argument('--accum-iters', default=100, type=int,
+                     help='number of gradient accumulated iterations to wait '
+                          'before update')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -282,6 +285,8 @@ def train(epoch):
     epoch_loss_stats = AverageMeter()
     # epoch_total_loss = 0
     start_time = time.time()
+    optimizer.zero_grad()
+    loss = 0
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = Variable(imgs)
         masks = Variable(masks.squeeze())
@@ -297,18 +302,22 @@ def train(epoch):
             masks = masks.cuda(2*args.gpu_pair)
             words = words.cuda(2*args.gpu_pair)
 
-        optimizer.zero_grad()
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
         if args.gpu_pair is not None:
             masks = masks.cuda(2*args.gpu_pair + 1)
-        loss = criterion(out_masks, masks)
-        loss.backward()
-        optimizer.step()
+        loss += criterion(out_masks, masks)
 
-        total_loss.update(loss.data[0], imgs.size(0))
-        epoch_loss_stats.update(loss.data[0], imgs.size(0))
+        if batch_idx % args.accum_iters == 0:
+            loss = loss / args.accum_iters
+            loss.backward()
+            optimizer.step()
+
+            total_loss.update(loss.data[0], imgs.size(0))
+            epoch_loss_stats.update(loss.data[0], imgs.size(0))
+            loss = 0
+            optimizer.zero_grad()
         # total_loss += loss.data[0]
         # epoch_total_loss += total_loss
 
