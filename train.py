@@ -402,9 +402,9 @@ def train(epoch):
             if args.clip_grad > 0:
                 nn.utils.clip_grad_norm_(net.parameters(), args.clip_grad)
             optimizer.step()
-            optimizer.zero_grad()
             loss = 0
             count = 0
+            optimizer.zero_grad()
 
 
         # total_loss += loss.item()
