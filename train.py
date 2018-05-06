@@ -9,7 +9,9 @@ import os
 import time
 import argparse
 import os.path as osp
+import multiprocessing
 from urllib.parse import urlparse
+
 
 # PyTorch imports
 import torch
@@ -570,6 +572,7 @@ def evaluate(epoch=0):
 
 
 if __name__ == '__main__':
+    multiprocessing.set_start_method('spawn')
     print('Train begins...')
     best_val_loss = None
     if args.eval_first:
@@ -591,7 +594,7 @@ if __name__ == '__main__':
                 best_val_loss is None or val_loss < best_val_loss):
                 best_val_loss = val_loss
                 filename = osp.join(args.save_folder, 'dmn_best_weights.pth')
-                torch.save(net.state_dict(), filename)
+                torch.save(net.module.state_dict(), filename)
     except KeyboardInterrupt:
         print('-' * 89)
         print('Exiting from training early')
