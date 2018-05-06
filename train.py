@@ -572,7 +572,7 @@ def evaluate(epoch=0):
 
 
 if __name__ == '__main__':
-    multiprocessing.set_start_method('spawn')
+    # multiprocessing.set_start_method('spawn')
     print('Train begins...')
     best_val_loss = None
     if args.eval_first:
