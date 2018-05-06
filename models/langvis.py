@@ -50,7 +50,8 @@ class LangVisNet(nn.Module):
                                    padding=0)
 
         self.mrnn = SRU(mixed_size, hid_mixed_size,
-                        num_layers=mixed_layers, rescale=False)
+                        num_layers=mixed_layers, rescale=False,
+                        layer_norm=True)
         if lstm:
             self.mrnn = nn.LSTM(mixed_size, hid_mixed_size,
                                 num_layers=mixed_layers)
