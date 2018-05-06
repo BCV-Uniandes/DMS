@@ -276,7 +276,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze,
                       visual_freeze=args.visual_freeze)
 
-if osp.exists(args.snapshot) and args.local_rank == 0:
+if osp.exists(args.snapshot):
     print('Loading state dict from: {0}'.format(args.snapshot))
     snapshot_dict = torch.load(args.snapshot)
     if args.old_weights:
@@ -347,7 +347,7 @@ optimizer = optimizer(net)
 # scheduler = ReduceLROnPlateau(
     # optimizer, patience=args.patience)
 
-if osp.exists(args.optim_snapshot) and args.local_rank == 0:
+if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
 
