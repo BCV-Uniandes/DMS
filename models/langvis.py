@@ -32,7 +32,8 @@ class LangVisNet(nn.Module):
                 backend, 1, pretrained=pretrained)
 
         self.emb = nn.Embedding(dict_size, emb_size)
-        self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers)
+        self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers,
+                              rescale=False)
         if lstm:
             self.lang_model = nn.LSTM(
                 emb_size, hid_size, num_layers=lang_layers)
@@ -49,7 +50,7 @@ class LangVisNet(nn.Module):
                                    padding=0)
 
         self.mrnn = SRU(mixed_size, hid_mixed_size,
-                        num_layers=mixed_layers)
+                        num_layers=mixed_layers, rescale=False)
         if lstm:
             self.mrnn = nn.LSTM(mixed_size, hid_mixed_size,
                                 num_layers=mixed_layers)
