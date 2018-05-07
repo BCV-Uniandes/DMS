@@ -12,7 +12,7 @@ import os.path as osp
 import multiprocessing
 from urllib.parse import urlparse
 
-multiprocessing.set_start_method("spawn")
+multiprocessing.set_start_method("spawn", force=True)
 
 # PyTorch imports
 import torch
