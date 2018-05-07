@@ -470,8 +470,6 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate(epoch=0):
-    if args.distributed:
-        val_sampler.set_epoch(epoch)
     if args.eval_mode:
         net.eval()
     score_thresh = np.concatenate([# [0],
