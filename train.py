@@ -9,7 +9,10 @@ import os
 import time
 import argparse
 import os.path as osp
+import multiprocessing
 from urllib.parse import urlparse
+
+multiprocessing.set_start_method("spawn")
 
 # PyTorch imports
 import torch
