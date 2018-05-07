@@ -440,7 +440,7 @@ def train(epoch):
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
             # cur_loss = total_loss / args.log_interval
-            print('{:2d}/{:2d} [{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
+            print('{:2d}/{:2d} [{:5d}] ({:5d}/{:5d}) | ms/batch {:.4f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
                       args.rank, args.nodes,
                       epoch, batch_idx, len(train_loader),
