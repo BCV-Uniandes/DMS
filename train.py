@@ -189,7 +189,7 @@ if args.distributed:
     print('Done!')
 
     args.rank = dist.get_rank()
-    args.nodes = dist.world_size()
+    args.nodes = dist.get_world_size()
 
 torch.manual_seed(args.seed)
 if args.cuda:
