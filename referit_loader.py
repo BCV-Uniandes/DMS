@@ -19,10 +19,12 @@ import os.path as osp
 import scipy.io as sio
 from referit import REFER
 import torch.utils.data as data
+from spacy_hunspell import spaCyHunSpell
 from referit.refer import mask as cocomask
 
 from utils import Corpus
 
+cv2.setNumThreads(0)
 
 class DatasetNotFoundError(Exception):
     pass
@@ -32,11 +34,11 @@ class ReferDataset(data.Dataset):
     SUPPORTED_DATASETS = {
         'referit': {'splits': ('train', 'val', 'trainval', 'test')},
         'unc': {
-            'splits': ('train', 'val', 'testA', 'testB'),
+            'splits': ('train', 'val', 'trainval', 'testA', 'testB'),
             'params': {'dataset': 'refcoco', 'split_by': 'unc'}
         },
         'unc+': {
-            'splits': ('train', 'val', 'testA', 'testB'),
+            'splits': ('train', 'val', 'trainval', 'testA', 'testB'),
             'params': {'dataset': 'refcoco+', 'split_by': 'unc'}
         },
         'gref': {
@@ -83,9 +85,13 @@ class ReferDataset(data.Dataset):
 
         self.corpus = torch.load(corpus_path)
 
-        imgset_file = '{0}_{1}.pth'.format(self.dataset, split)
-        imgset_path = osp.join(dataset_path, imgset_file)
-        self.images = torch.load(imgset_path)
+        splits = [split]
+        if self.dataset != 'referit':
+            splits = ['train', 'val'] if split == 'trainval' else [split]
+        for split in splits:
+            imgset_file = '{0}_{1}.pth'.format(self.dataset, split)
+            imgset_path = osp.join(dataset_path, imgset_file)
+            self.images += torch.load(imgset_path)
 
     def exists_dataset(self):
         return osp.exists(osp.join(self.split_root, self.dataset))
