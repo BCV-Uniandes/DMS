@@ -283,7 +283,7 @@ def train(epoch):
     total_loss = AverageMeter()
     # total_loss = 0
     epoch_loss_stats = AverageMeter()
-    time_stats = AverageMeter()
+    # time_stats = AverageMeter()
     # epoch_total_loss = 0
     start_time = time.time()
     optimizer.zero_grad()
@@ -317,8 +317,8 @@ def train(epoch):
 
             total_loss.update(loss.data[0], imgs.size(0))
             epoch_loss_stats.update(loss.data[0], imgs.size(0))
-            time_stats.update(time.time() - start_time)
-            start_time = time.time()
+            # time_stats.update(time.time() - start_time)
+            # start_time = time.time()
             loss = 0
             optimizer.zero_grad()
         # total_loss += loss.data[0]
@@ -345,15 +345,16 @@ def train(epoch):
             torch.save(state_dict, optim_filename)
 
         if batch_idx % args.log_interval == 0:
-            # elapsed_time = time.time() - start_time
+            elapsed_time = time.time() - start_time
             # cur_loss = total_loss / args.log_interval
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
-                      time_stats.avg * 1000, total_loss.avg,
+                      elapsed_time * 1000, total_loss.avg,
                       optimizer.param_groups[0]['lr']))
             total_loss.reset()
 
+        start_time = time.time()
         # total_loss = 0
 
     epoch_total_loss = epoch_loss_stats.avg
