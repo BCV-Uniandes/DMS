@@ -248,8 +248,8 @@ if args.val is not None:
                              annotation_transform=target_transform,
                              max_query_len=args.time)
     val_sampler = None
-    # if args.distributed:
-    #     val_sampler = DistributedSampler(refer_val)
+    if args.distributed:
+        val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             pin_memory=args.pin_memory,
                             num_workers=args.workers,
@@ -470,6 +470,8 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate(epoch=0):
+    if args.distributed:
+        val_sampler.set_epoch(epoch)
     if args.eval_mode:
         net.eval()
     score_thresh = np.concatenate([# [0],
@@ -494,9 +496,9 @@ def evaluate(epoch=0):
             mask = mask.squeeze()
             words = phrase
             if args.cuda:
-                imgs = imgs.cuda(non_blocking=True)
-                words = words.cuda(non_blocking=True)
-                mask = mask.float().cuda(non_blocking=True)
+                imgs = imgs.cuda()
+                words = words.cuda()
+                mask = mask.float().cuda()
 
             out = net(imgs, words)
             out = F.sigmoid(out)
