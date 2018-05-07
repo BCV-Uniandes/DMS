@@ -33,6 +33,7 @@ from utils.transforms import ResizeImage, ResizeAnnotation
 import numpy as np
 from tqdm import tqdm
 
+
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
 
@@ -91,6 +92,8 @@ parser.add_argument('--gpu-pair', type=int, default=None,
 parser.add_argument('--accum-iters', default=100, type=int,
                      help='number of gradient accumulated iterations to wait '
                           'before update')
+parser.add_argument('--pin-memory', default=False, action='store_true',
+                     help='enable CUDA memory pin on DataLoader')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -186,7 +189,7 @@ refer = ReferDataset(data_root=args.data,
                      max_query_len=args.time)
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
-                          pin_memory=True, num_workers=args.workers)
+                          pin_memory=args.pin_memory, num_workers=args.workers)
 
 start_epoch = args.start_epoch
 
@@ -198,7 +201,8 @@ if args.val is not None:
                              annotation_transform=target_transform,
                              max_query_len=args.time)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
-                            pin_memory=True, num_workers=args.workers)
+                            pin_memory=args.pin_memory,
+                            num_workers=args.workers)
 
 
 if not osp.exists(args.save_folder):
