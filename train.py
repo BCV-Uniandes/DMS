@@ -180,10 +180,16 @@ if args.cuda:
 
 args.distributed = args.world_size > 1
 
+args.rank = 0
+args.nodes = 1
+
 if args.distributed:
     print('Starting distribution node')
     dist.init_process_group(args.dist_backend, init_method='env://')
     print('Done!')
+
+    args.rank = dist.get_rank()
+    args.nodes = dist.world_size()
 
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -242,8 +248,8 @@ if args.val is not None:
                              annotation_transform=target_transform,
                              max_query_len=args.time)
     val_sampler = None
-    if args.distributed:
-        val_sampler = DistributedSampler(refer_val)
+    # if args.distributed:
+    #     val_sampler = DistributedSampler(refer_val)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             pin_memory=args.pin_memory,
                             num_workers=args.workers,
@@ -434,8 +440,9 @@ def train(epoch):
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
             # cur_loss = total_loss / args.log_interval
-            print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
+            print('{:2d}/{:2d} [{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
+                      args.rank, args.nodes,
                       epoch, batch_idx, len(train_loader),
                       elapsed_time * 1000, total_loss.avg,
                       lr_report(optimizer)))
