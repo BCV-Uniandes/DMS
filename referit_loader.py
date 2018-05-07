@@ -19,7 +19,6 @@ import os.path as osp
 import scipy.io as sio
 from referit import REFER
 import torch.utils.data as data
-from spacy_hunspell import spaCyHunSpell
 from referit.refer import mask as cocomask
 
 from utils import Corpus

@@ -290,7 +290,7 @@ def train(epoch):
     total_loss = AverageMeter()
     # total_loss = 0
     epoch_loss_stats = AverageMeter()
-    # time_stats = AverageMeter()
+    time_stats = AverageMeter()
     # epoch_total_loss = 0
     start_time = time.time()
     optimizer.zero_grad()
@@ -353,6 +353,7 @@ def train(epoch):
 
         if batch_idx % args.log_interval == 0:
             elapsed_time = time.time() - start_time
+            # elapsed_time = time_stats.avg
             # cur_loss = total_loss / args.log_interval
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
@@ -361,8 +362,8 @@ def train(epoch):
                       optimizer.param_groups[0]['lr']))
             total_loss.reset()
 
-        start_time = time.time()
         # total_loss = 0
+        start_time = time.time()
 
     epoch_total_loss = epoch_loss_stats.avg
 
