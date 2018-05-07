@@ -13,6 +13,7 @@ import cv2
 import json
 import uuid
 import torch
+import spacy
 import progressbar
 import numpy as np
 import os.path as osp
@@ -24,7 +25,9 @@ from referit.refer import mask as cocomask
 
 from utils import Corpus
 
-cv2.setNumThreads(0)
+NLP = spacy.load('en_core_web_sm')
+HUNSPELL = spaCyHunSpell(NLP, 'linux')
+NLP.add_pipe(HUNSPELL)
 
 class DatasetNotFoundError(Exception):
     pass
