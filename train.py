@@ -484,65 +484,66 @@ def evaluate(epoch=0):
     seg_correct = torch.zeros(len(eval_seg_iou_list), len(score_thresh))
     seg_total = 0
     start_time = time.time()
-    for img, mask, phrase in tqdm(val_loader, dynamic_ncols=True):
-        # img, mask, phrase = refer_val.pull_item(i)
-        # words = refer_val.tokenize_phrase(phrase)
-        # h, w, _ = img.shape
-        # img = input_transform(img)
-        imgs = img
-        mask = mask.squeeze()
-        words = phrase
-        if args.cuda:
-            imgs = imgs.cuda()
-            words = words.cuda()
-            mask = mask.float().cuda()
+    with torch.no_grad():
+        for img, mask, phrase in tqdm(val_loader, dynamic_ncols=True):
+            # img, mask, phrase = refer_val.pull_item(i)
+            # words = refer_val.tokenize_phrase(phrase)
+            # h, w, _ = img.shape
+            # img = input_transform(img)
+            imgs = img
+            mask = mask.squeeze()
+            words = phrase
+            if args.cuda:
+                imgs = imgs.cuda(non_blocking=True)
+                words = words.cuda(non_blocking=True)
+                mask = mask.float().cuda(non_blocking=True)
 
-        with torch.no_grad():
             out = net(imgs, words)
             out = F.sigmoid(out)
             out = F.upsample(out, size=(
                 mask.size(-2), mask.size(-1)), mode='bilinear',
                 align_corners=True).squeeze()
-        # out = out.squeeze().data.cpu().numpy()
-        # out = out.squeeze()
-        # out = (out >= score_thresh).astype(np.uint8)
-        # out = target_transform(out, (h, w))
+            # out = out.squeeze().data.cpu().numpy()
+            # out = out.squeeze()
+            # out = (out >= score_thresh).astype(np.uint8)
+            # out = target_transform(out, (h, w))
 
-        inter = torch.zeros(len(score_thresh))
-        union = torch.zeros(len(score_thresh))
-        for idx, thresh in enumerate(score_thresh):
-            thresholded_out = (out > thresh).float().data
-            try:
-                inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
-            except AssertionError as e:
-                inter[idx] = 0
-                union[idx] = mask.sum()
-                # continue
-
-        cum_I += inter
-        cum_U += union
-        this_iou = inter / union
-
-        for idx, seg_iou in enumerate(eval_seg_iou_list):
-            for jdx in range(len(score_thresh)):
-                seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou).float()
-
-        seg_total += 1
-
-        if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
-            temp_cum_iou = cum_I / cum_U
-            _, which = torch.max(temp_cum_iou,0)
-            which = which.numpy()
-            print(' ')
-            print('Accumulated IoUs at different thresholds:')
-            print('+' + '-' * 34 + '+')
-            print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
-            print('+' + '-' * 34 + '+')
+            inter = torch.zeros(len(score_thresh))
+            union = torch.zeros(len(score_thresh))
             for idx, thresh in enumerate(score_thresh):
-                this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                    if idx == which else '| {:<15.3E}| {:<15.8f} |')
-                print(this_string.format(thresh, temp_cum_iou[idx]))
-            print('+' + '-' * 34 + '+')
+                thresholded_out = (out > thresh).float().data
+                try:
+                    inter[idx], union[idx] = compute_mask_IU(
+                        thresholded_out, mask)
+                except AssertionError as e:
+                    inter[idx] = 0
+                    union[idx] = mask.sum()
+                    # continue
+
+            cum_I += inter
+            cum_U += union
+            this_iou = inter / union
+
+            for idx, seg_iou in enumerate(eval_seg_iou_list):
+                for jdx in range(len(score_thresh)):
+                    seg_correct[idx, jdx] += (this_iou[jdx] >= seg_iou).float()
+
+            seg_total += 1
+
+            if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
+                temp_cum_iou = cum_I / cum_U
+                _, which = torch.max(temp_cum_iou,0)
+                which = which.numpy()
+                print(' ')
+                print('Accumulated IoUs at different thresholds:')
+                print('+' + '-' * 34 + '+')
+                print('| {:15}| {:15} |'.format('Thresholds', 'mIoU'))
+                print('+' + '-' * 34 + '+')
+                for idx, thresh in enumerate(score_thresh):
+                    this_string = ('| {:<15.3E}| {:<15.8f} | <--'
+                        if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                    print(this_string.format(thresh, temp_cum_iou[idx]))
+                print('+' + '-' * 34 + '+')
 
     # Evaluation finished. Compute total IoUs and threshold that maximizes
     for jdx, thresh in enumerate(score_thresh):
