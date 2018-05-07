@@ -221,14 +221,14 @@ refer = ReferDataset(data_root=args.data,
                      max_query_len=args.time)
 
 if args.distributed:
-    sampler = DistributedSampler(refer)
+    train_sampler = DistributedSampler(refer)
 else:
-    sampler = None
+    train_sampler = None
 
 
 train_loader = DataLoader(refer, batch_size=args.batch_size,
-                          shuffle=(sampler is None),
-                          sampler=sampler,
+                          shuffle=(train_sampler is None),
+                          sampler=train_sampler,
                           pin_memory=args.pin_memory,
                           num_workers=args.workers)
 
@@ -367,6 +367,8 @@ def train(epoch):
     start_time = time.time()
     loss = 0
     optimizer.zero_grad()
+    if args.distributed:
+        train_sampler.set_epoch(epoch)
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = imgs.requires_grad_()
         masks = masks.requires_grad_().squeeze()
@@ -461,6 +463,8 @@ def compute_mask_IU(masks, target):
 
 
 def evaluate(epoch=0):
+    if args.distributed:
+        val_sampler.set_epoch(epoch)
     if args.eval_mode:
         net.eval()
     score_thresh = np.concatenate([# [0],
