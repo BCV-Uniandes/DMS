@@ -119,7 +119,7 @@ parser.add_argument('--mix-we', action='store_true', default=False,
                     help='train linear layer filters based also on WE')
 parser.add_argument('--lstm', action='store_true', default=False,
                     help='use LSTM units for RNN modules. Default SRU')
-parser.add_argument('--high-res', action='store_true', default=True,
+parser.add_argument('--high-res', action='store_true', default=False,
                     help='high res version of the output through '
                          'upsampling + conv')
 parser.add_argument('--upsamp-channels', default=50, type=int,
@@ -133,7 +133,7 @@ parser.add_argument('--upsamp-amplification', default=32, type=int,
 parser.add_argument('--langvis-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
-parser.add_argument('--no-embcube', action='store_true', default=False)
+parser.add_argument('--no-embcube', action='store_true', default=True)
 
 # Other settings
 parser.add_argument('--visdom', type=str, default=None,
