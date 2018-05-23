@@ -28,6 +28,10 @@ cv2.setNumThreads(0)
 class DatasetNotFoundError(Exception):
     pass
 
+class ObjectFilter:
+    ALL = "all"
+    PERSONS = "person"
+    OBJECTS = "objects"
 
 class ReferDataset(data.Dataset):
     SUPPORTED_DATASETS = {
@@ -48,8 +52,10 @@ class ReferDataset(data.Dataset):
 
     def __init__(self, data_root, split_root='data', dataset='referit',
                  transform=None, annotation_transform=None,
-                 split='train', max_query_len=20):
+                 split='train', obj_filter=ObjectFilter.ALL,
+                 max_query_len=20):
         self.images = []
+        self.filter = obj_filter
         self.data_root = data_root
         self.split_root = split_root
         self.dataset = dataset
@@ -75,6 +81,8 @@ class ReferDataset(data.Dataset):
 
         dataset_path = osp.join(self.split_root, self.dataset)
         corpus_path = osp.join(dataset_path, 'corpus.pth')
+        if self.filter != ObjectFilter.ALL:
+            dataset_path = osp.join(dataset_path, self.filter)
         valid_splits = self.SUPPORTED_DATASETS[self.dataset]['splits']
 
         if split not in valid_splits:
@@ -93,7 +101,10 @@ class ReferDataset(data.Dataset):
             self.images += torch.load(imgset_path)
 
     def exists_dataset(self):
-        return osp.exists(osp.join(self.split_root, self.dataset))
+        base_path = osp.join(self.split_root, self.dataset)
+        if self.split != ObjectFilter.ALL:
+            base_path = osp.join(base_path, self.filter)
+        return osp.exists(base_path)
 
     def process_dataset(self):
         if self.dataset not in self.SUPPORTED_DATASETS:
@@ -102,6 +113,8 @@ class ReferDataset(data.Dataset):
                     self.dataset))
 
         dataset_folder = osp.join(self.split_root, self.dataset)
+        if self.split != ObjectFilter.ALL:
+            dataset_folder = osp.join(dataset_folder, self.filter)
         if not osp.exists(dataset_folder):
             os.makedirs(dataset_folder)
 
@@ -164,9 +177,18 @@ class ReferDataset(data.Dataset):
         refs = [refer.refs[ref_id] for ref_id in refer.refs
                 if refer.refs[ref_id]['split'] == setname]
 
+        if self.filter != ObjectFilter.ALL:
+            person_idx = dict(
+                zip(refer.cats.values(), refer.cats.keys()))[
+                    ObjectFilter.PERSONS]
+            cmp = (lambda x: not x if self.filter == ObjectFilter.OBJECTS
+                   else lambda x: x)
+            refs = [ref for ref in refs
+                    if cmp(ref['category_id'] == person_idx)]
+
         refs = sorted(refs, key=lambda x: x['file_name'])
 
-        if len(self.corpus) == 0:
+        if len(self.corpus) == 0 and self.filter == ObjectFilter.ALL:
             print('Saving dataset corpus dictionary...')
             corpus_file = osp.join(self.split_root, self.dataset, 'corpus.pth')
             self.corpus.load_file(vocab_file)

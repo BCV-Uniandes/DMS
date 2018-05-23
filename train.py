@@ -28,8 +28,8 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from utils import AverageMeter
 from utils.losses import IoULoss
 from models import LangVisUpsample
-from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
+from referit_loader import ReferDataset, ObjectFilter
 from utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
@@ -57,6 +57,8 @@ parser.add_argument('--split', default='train', type=str,
                     help='name of the dataset split used to train')
 parser.add_argument('--val', default=None, type=str,
                     help='name of the dataset split used to validate')
+parser.add_argument('--obj-filter', default=ObjectFilter.ALL, type=str,
+                    help='select only non-human/human/all object categories')
 parser.add_argument('--eval-first', default=False, action='store_true',
                     help='evaluate model weights before training')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
@@ -189,7 +191,8 @@ refer = ReferDataset(data_root=args.data,
                      split=args.split,
                      transform=input_transform,
                      annotation_transform=target_transform,
-                     max_query_len=args.time)
+                     max_query_len=args.time,
+                     obj_filter=args.obj_filter)
 
 train_loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True,
                           pin_memory=args.pin_memory, num_workers=args.workers)
@@ -202,7 +205,8 @@ if args.val is not None:
                              split=args.val,
                              transform=input_transform,
                              annotation_transform=target_transform,
-                             max_query_len=args.time)
+                             max_query_len=args.time,
+                             obj_filter=args.obj_filter)
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             pin_memory=args.pin_memory,
                             num_workers=args.workers)
