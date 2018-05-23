@@ -102,7 +102,7 @@ class ReferDataset(data.Dataset):
 
     def exists_dataset(self):
         base_path = osp.join(self.split_root, self.dataset)
-        if self.split != ObjectFilter.ALL:
+        if self.filter != ObjectFilter.ALL:
             base_path = osp.join(base_path, self.filter)
         return osp.exists(base_path)
 
@@ -113,7 +113,7 @@ class ReferDataset(data.Dataset):
                     self.dataset))
 
         dataset_folder = osp.join(self.split_root, self.dataset)
-        if self.split != ObjectFilter.ALL:
+        if self.filter != ObjectFilter.ALL:
             dataset_folder = osp.join(dataset_folder, self.filter)
         if not osp.exists(dataset_folder):
             os.makedirs(dataset_folder)
@@ -188,7 +188,7 @@ class ReferDataset(data.Dataset):
 
         refs = sorted(refs, key=lambda x: x['file_name'])
 
-        if len(self.corpus) == 0 and self.filter == ObjectFilter.ALL:
+        if len(self.corpus) == 0:
             print('Saving dataset corpus dictionary...')
             corpus_file = osp.join(self.split_root, self.dataset, 'corpus.pth')
             self.corpus.load_file(vocab_file)
