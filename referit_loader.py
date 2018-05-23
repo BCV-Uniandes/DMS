@@ -185,7 +185,7 @@ class ReferDataset(data.Dataset):
             print("Person Key: {0}".format(person_idx))
             refs = [ref for ref in refs
                     if not ((ref['category_id'] == person_idx) ^
-                         self.filter == ObjectFilter.PERSONS)]
+                         (self.filter == ObjectFilter.PERSONS))]
 
         refs = sorted(refs, key=lambda x: x['file_name'])
 
