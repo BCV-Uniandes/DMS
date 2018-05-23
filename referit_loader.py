@@ -182,6 +182,7 @@ class ReferDataset(data.Dataset):
             person_idx = dict(
                 zip(refer.cats.values(), refer.cats.keys()))[
                     ObjectFilter.PERSONS]
+            print("Person Key: {0}".format(person_idx))
             refs = [ref for ref in refs
                     if not ((ref['category_id'] == person_idx) ^
                          self.filter == ObjectFilter.PERSONS)]
