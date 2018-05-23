@@ -178,6 +178,7 @@ class ReferDataset(data.Dataset):
                 if refer.refs[ref_id]['split'] == setname]
 
         if self.filter != ObjectFilter.ALL:
+            print("Filtering by {0}".format(self.filter))
             person_idx = dict(
                 zip(refer.cats.values(), refer.cats.keys()))[
                     ObjectFilter.PERSONS]
