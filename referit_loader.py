@@ -182,10 +182,9 @@ class ReferDataset(data.Dataset):
             person_idx = dict(
                 zip(refer.cats.values(), refer.cats.keys()))[
                     ObjectFilter.PERSONS]
-            cmp = (lambda x: not x if self.filter == ObjectFilter.OBJECTS
-                   else lambda x: x)
             refs = [ref for ref in refs
-                    if cmp(ref['category_id'] == person_idx)]
+                    if not ((ref['category_id'] == person_idx) ^
+                         self.filter == ObjectFilter.PERSONS)]
 
         refs = sorted(refs, key=lambda x: x['file_name'])
 
