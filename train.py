@@ -330,12 +330,12 @@ def optimizer_wrapper(Optim, **kwargs):
     return init_func
 
 optimizers = {
-    "adam": (optimizer_wrapper(optim.Adam, lr=args.lr, amsgrad=True),
+    "adam": (optimizer_wrapper(optim.Adam, lr=args.lr * args.nodes, amsgrad=True),
              lambda optim: optim.param_groups[0]['lr']),
-    "sgd": (optimizer_wrapper(optim.SGD, lr=args.lr, momentum=0.9),
+    "sgd": (optimizer_wrapper(optim.SGD, lr=args.lr * args.nodes, momentum=0.9),
             lambda optim: optim.param_groups[0]['lr']),
     "yellowfin": (optimizer_wrapper(
-        YFOptimizer, lr=args.lr, sparsity_debias=True),
+        YFOptimizer, lr=args.lr * args.nodes, sparsity_debias=True),
         lambda optim: optim._lr)
 }
 
@@ -344,7 +344,7 @@ if args.optimizer not in optimizers:
     print("{0} not defined in available optimizer list, fallback to Adam")
 
 optimizer, lr_report = optimizers[args.optimizer]
-optimizer = optimizer(net)
+# optimizer = optimizer(net)
 # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
 # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
 
