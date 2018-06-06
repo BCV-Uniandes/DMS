@@ -253,7 +253,7 @@ if args.val is not None:
 
 
 
-if not osp.exists(args.save_folder):
+if not osp.exists(args.save_folder) and args.rank == 0:
     os.makedirs(args.save_folder)
 
 
