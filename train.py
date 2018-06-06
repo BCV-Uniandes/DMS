@@ -344,7 +344,7 @@ if args.optimizer not in optimizers:
     print("{0} not defined in available optimizer list, fallback to Adam")
 
 optimizer, lr_report = optimizers[args.optimizer]
-# optimizer = optimizer(net)
+optimizer = optimizer(net)
 # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
 # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
 
