@@ -37,6 +37,7 @@ from utils.transforms import ResizeImage, ResizeAnnotation
 # Other imports
 import numpy as np
 from tqdm import tqdm
+import horovod.torch as hvd
 
 parser = argparse.ArgumentParser(
     description='Query Segmentation Network training routine')
@@ -174,26 +175,19 @@ print('\n'.join(['--{0} {1}'.format(arg, args_dict[arg])
                  for arg in args_dict]))
 print('\n\n')
 
+print('Starting horovod')
+
+hvd.init()
+torch.manual_seed(args.seed)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 if args.cuda:
-    torch.cuda.set_device(args.local_rank)
+    torch.cuda.set_device(hvd.local_rank())
+    torch.cuda.manual_seed(hvd.size())
 
-args.distributed = args.world_size > 1
+args.distributed = hvd.size() > 1
 
-args.rank = 0
-args.nodes = 1
-
-if args.distributed:
-    print('Starting distribution node')
-    dist.init_process_group(args.dist_backend, init_method='env://')
-    print('Done!')
-
-    args.rank = dist.get_rank()
-    args.nodes = dist.get_world_size()
-
-torch.manual_seed(args.seed)
-if args.cuda:
-    torch.cuda.manual_seed(args.seed)
+args.rank = hvd.rank()
+args.nodes = hvd.size()
 
 image_size = (args.size, args.size)
 
@@ -227,7 +221,8 @@ refer = ReferDataset(data_root=args.data,
                      max_query_len=args.time)
 
 if args.distributed:
-    train_sampler = DistributedSampler(refer)
+    train_sampler = DistributedSampler(
+        refer, num_replicas=hvd.size(), rank=hvd.rank())
 else:
     train_sampler = None
 
@@ -249,7 +244,8 @@ if args.val is not None:
                              max_query_len=args.time)
     val_sampler = None
     if args.distributed:
-        val_sampler = DistributedSampler(refer_val)
+        val_sampler = DistributedSampler(
+            refer_val, num_replicas=hvd.size(), rank=hvd.rank())
     val_loader = DataLoader(refer_val, batch_size=args.batch_size,
                             pin_memory=args.pin_memory,
                             num_workers=args.workers,
@@ -282,7 +278,7 @@ net = LangVisUpsample(dict_size=len(refer.corpus),
                       langvis_freeze=args.langvis_freeze,
                       visual_freeze=args.visual_freeze)
 
-if osp.exists(args.snapshot):
+if osp.exists(args.snapshot) and args.rank == 0:
     print('Loading state dict from: {0}'.format(args.snapshot))
     snapshot_dict = torch.load(args.snapshot)
     if args.old_weights:
@@ -292,14 +288,16 @@ if osp.exists(args.snapshot):
         snapshot_dict = state
     net.load_state_dict(snapshot_dict)
 
-if args.distributed:
-    if args.cuda:
-        net = net.cuda()
-    net = parallel.DistributedDataParallel(
-        net, device_ids=[args.local_rank], output_device=args.local_rank)
+# if args.distributed:
+#     if args.cuda:
+#         net = net.cuda()
+#     net = parallel.DistributedDataParallel(
+#         net, device_ids=[args.local_rank], output_device=args.local_rank)
 
 if args.cuda:
     net.cuda()
+
+hvd.broadcast_parameters(net.state_dict(), root_rank=0)
 
 if args.visdom is not None:
     visdom_url = urlparse(args.visdom)
@@ -353,10 +351,13 @@ optimizer = optimizer(net)
 # scheduler = ReduceLROnPlateau(
     # optimizer, patience=args.patience)
 
-if osp.exists(args.optim_snapshot):
+if osp.exists(args.optim_snapshot) and args.rank == 0:
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
+hvd.broadcast_parameters(optimizer.state_dict(), root_rank=0)
 
+optimizer = hvd.DistributedOptimizer(
+    optimizer, named_parameters=net.named_parameters())
 # scheduler.step(args.start_epoch)
 
 criterion = nn.BCEWithLogitsLoss()
@@ -369,6 +370,7 @@ def train(epoch):
     total_loss = AverageMeter()
     # total_loss = 0
     epoch_loss_stats = AverageMeter()
+    time_stats = AverageMeter()
     # epoch_total_loss = 0
     start_time = time.time()
     loss = 0
@@ -410,6 +412,8 @@ def train(epoch):
             optimizer.step()
             total_loss.update(loss.item(), imgs.size(0))
             epoch_loss_stats.update(loss.item(), imgs.size(0))
+            time_stats.update(time.time() - start_time, imgs.size(0))
+            start_time = time.time()
             loss = 0
             optimizer.zero_grad()
 
@@ -437,8 +441,8 @@ def train(epoch):
             state_dict = optimizer.state_dict()
             torch.save(state_dict, optim_filename)
 
-        if batch_idx % args.log_interval == 0:
-            elapsed_time = time.time() - start_time
+        if (batch_idx % args.log_interval == 0) and args.local_rank == 0:
+            elapsed_time = time_stats.avg
             # cur_loss = total_loss / args.log_interval
             print('{:2d}/{:2d} [{:5d}] ({:5d}/{:5d}) | ms/batch {:.4f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
@@ -606,7 +610,7 @@ if __name__ == '__main__':
                 best_val_loss is None or val_loss < best_val_loss):
                 best_val_loss = val_loss
                 filename = osp.join(args.save_folder, 'dmn_best_weights.pth')
-                torch.save(net.module.state_dict(), filename)
+                torch.save(net.state_dict(), filename)
     except KeyboardInterrupt:
         print('-' * 89)
         print('Exiting from training early')
