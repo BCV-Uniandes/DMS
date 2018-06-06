@@ -330,7 +330,7 @@ def optimizer_wrapper(Optim, **kwargs):
     return init_func
 
 optimizers = {
-    "adam": (optimizer_wrapper(optim.Adam, lr=args.lr * args.nodes, amsgrad=True),
+    "adam": (optimizer_wrapper(optim.Adam, lr=args.lr * args.nodes),
              lambda optim: optim.param_groups[0]['lr']),
     "sgd": (optimizer_wrapper(optim.SGD, lr=args.lr * args.nodes, momentum=0.9),
             lambda optim: optim.param_groups[0]['lr']),
