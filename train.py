@@ -351,10 +351,10 @@ optimizer = optimizer(net)
 # scheduler = ReduceLROnPlateau(
     # optimizer, patience=args.patience)
 
-if osp.exists(args.optim_snapshot) and args.rank == 0:
+if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
     # last_epoch = args.start_epoch
-hvd.broadcast_parameters(optimizer.state_dict(), root_rank=0)
+# hvd.broadcast_parameters(optimizer.state_dict(), root_rank=0)
 
 optimizer = hvd.DistributedOptimizer(
     optimizer, named_parameters=net.named_parameters())
