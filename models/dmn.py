@@ -135,7 +135,7 @@ class BaseDMN(nn.Module):
         vis, base_features = self.base(vis)
 
         # Generate channels of 'x' and 'y' info
-        _, C, H, W = vis.size()
+        _, _, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
 
         # Add additional visual hint feature maps.
