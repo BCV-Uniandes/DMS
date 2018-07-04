@@ -8,9 +8,9 @@
 
 """PyTorch models."""
 
-from .langvis import LangVisNet, LangVisUpsample
+from .dmn import BaseDMN, DMN
 
-LangVisNet
-LangVisUpsample
+BaseDMN
+DMN
 
 VERSION_INFO = (0, 1, 0, 'dev0')

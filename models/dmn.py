@@ -234,7 +234,8 @@ class BaseDMN(nn.Module):
         https://github.com/chenxi116/TF-phrasecut-public/blob/master/util/processing_tools.py#L5
         and slightly modified
         """
-        spatial_batch_val = np.zeros((1, 8, featmap_H, featmap_W), dtype=np.float32)
+        spatial_batch_val = np.zeros(
+            (1, 8, featmap_H, featmap_W), dtype=np.float32)
         for h in range(featmap_H):
             for w in range(featmap_W):
                 xmin = w / featmap_W * 2 - 1
@@ -250,13 +251,51 @@ class BaseDMN(nn.Module):
 
 
 class UpsamplingModule(nn.Module):
-    def __init__(self, in_channels, upsampling_channels=1,
-                 mode='bilineal', ker_size=3,
+    r"""
+    DMN Upsampling Module.
+
+    Given a low resolution segmentation mask :math:`M_5` and a set
+    of pyramid features :math:`(I_k)_{i = 1}^{5}`, the Upsampling Module
+    computes a high resolution segmentation mask :math:`M_1` on a incremental
+    fashion. At each step, the module takes the current resolution map and
+    combines it with its corresponding feature map.
+
+    .. math::
+        \begin{array}{ll}
+        M_k = \text{Upsample}(\text{Conv}[M_{k+1}, I_{k+1}])) \quad
+        k = 4, \cdots, 1
+        \end{array}
+
+    Args:
+        in_channels: The total number of input features incoming from the
+            multimodal module
+        mode: Usampling mode, see :class:`torch.nn.Upsample`.
+            Default: `bilineal`
+        ker_size: Kernel size for each convolution step. Default: 3
+        amplification: Amplification zoom to apply, it must be a power
+            of two. Default: 32
+        non_linearity: If ``True``, it will apply a :class:`torch.nn.PReLU`
+            activation in-between upsampling steps. Default: ``False``
+        feature_channels: Expected number of feature channels per
+            each visual map. Default:  `[2688, 1552, 704, 336, 64]`
+
+    Inputs: x, features
+        - **x** of shape :math:`(O, H/32, W/32)`: tensor containing
+        :math:`O` low resolution segmentation map features.
+        - **features** a list containing all the downsampled feature maps
+        returned by the visual module as tensors of shape
+        :math:`(1, C, H/2^k, W/2^k)`, with :math:`k = 1, \cdots, 5`.
+
+    Outputs: mask
+        - **output** of shape :math:`(1, H/\log_2{ampl}, W/\log_2{ampl})`:
+        tensor that contains a single segmentation mask map.
+    """
+
+    def __init__(self, in_channels, mode='bilineal', ker_size=3,
                  amplification=32, non_linearity=False,
                  feature_channels=[2688, 1552, 704, 336, 64]):
         super().__init__()
         self.ker_size = ker_size
-        self.upsampling_channels = upsampling_channels
         self.non_linearity = non_linearity
         self.up = nn.Upsample(scale_factor=2, mode=mode)
         self.convs = []
@@ -306,20 +345,69 @@ class UpsamplingModule(nn.Module):
         return x
 
 
-class LangVisUpsample(nn.Module):
+class DMN(nn.Module):
+    r"""
+    Dynamic Multimodal Network (DMN).
+
+    Given an image :math:`I` and a referral expression :math:`e` encoded as a
+    number sequence of length :math:`T`, the Base DMN generates a low
+    resolution segmentation mask :math:`M_1.
+
+    .. math::
+        \begin{array}{ll}
+        (I_1, I_2, I_3, I_4, I_5) = V(I) \\
+        h_t = RNN(WE(e_t), h_{t - 1}) \quad t = 0, \cdots, T \\
+        r_t = \left[ h_t, WE(e_t) \right]
+        f_t = \left\{\sigma(W_{k} r_t + b_{k})\right\}_{k = 1} ^ K \\
+        F_t = I_5 * f_t
+        M_t = \text{Conv}_{1 \times 1}\left([I_5, F_t, LOC, r_t]\right) \\
+        R_5 = mRNN(\left\{M_t\right\}_{t = 1}^{T})
+        M_j = \text{Upsample}(\text{Conv}[M_{j+1}, I_{j+1}])) \quad
+        j = 4, \cdots, 1
+        \end{array}
+
+    where :math:`V` is the visual module, :math:`I_j` are the output responses
+    per each downsampled resolution level (2x, ..., 32x), :math:`*` is the
+    convolution operator and :math:`\sigma` is the logistic sigmoid function.
+
+    Args:
+        in_channels: The total number of input features incoming from the
+            multimodal module
+        mode: Usampling mode, see :class:`torch.nn.Upsample`.
+            Default: `bilineal`
+        ker_size: Kernel size for each convolution step. Default: 3
+        amplification: Amplification zoom to apply, it must be a power
+            of two. Default: 32
+        non_linearity: If ``True``, it will apply a :class:`torch.nn.PReLU`
+            activation in-between upsampling steps. Default: ``False``
+        feature_channels: Expected number of feature channels per
+            each visual map. Default:  `[2688, 1552, 704, 336, 64]`
+
+    Inputs: x, features
+        - **x** of shape :math:`(O, H/32, W/32)`: tensor containing
+        :math:`O` low resolution segmentation map features.
+        - **features** a list containing all the downsampled feature maps
+        returned by the visual module as tensors of shape
+        :math:`(1, C, H/2^k, W/2^k)`, with :math:`k = 1, \cdots, 5`.
+
+    Outputs: out
+        - **output** of shape :math:`(1, H/\log_2{ampl}, W/\log_2{ampl})`:
+        tensor that contains a single segmentation mask map.
+    """
+
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
                  extra=True, high_res=False, upsampling_channels=50,
-                 upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
+                 upsampling_mode='bilineal', upsampling_size=3,
                  upsampling_amplification=32, langvis_freeze=False):
         super().__init__()
         self.langvis = BaseDMN(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
-                                  extra, gpu_pair, high_res)
+                                  extra, high_res)
         self.high_res = high_res
         self.langvis_freeze = langvis_freeze
         if high_res:
