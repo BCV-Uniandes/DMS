@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Language and Vision (LangVisNet) Network PyTorch implementation.
-"""
+"""Dynamic Multimodal Network (DMN) PyTorch implementation."""
 
 import torch
 import numpy as np
@@ -13,12 +11,84 @@ from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
 
-class LangVisNet(nn.Module):
+class BaseDMN(nn.Module):
+    r"""
+    Base DMN implementation: Language, Visual and Multimodal modules.
+
+    Given an image :math:`I` and a referral expression :math:`e` encoded as a
+    number sequence of length :math:`T`, the Base DMN generates a low
+    resolution segmentation mask :math:`M_5` for the object referred on the
+    input expression.
+
+    .. math::
+        \begin{array}{ll}
+        (I_1, I_2, I_3, I_4, I_5) = V(I) \\
+        h_t = RNN(WE(e_t), h_{t - 1}) \quad t = 0, \cdots, T \\
+        r_t = \left[ h_t, WE(e_t) \right]
+        f_t = \left\{\sigma(W_{k} r_t + b_{k})\right\}_{k = 1} ^ K \\
+        F_t = I_5 * f_t
+        M_t = \text{Conv}_{1 \times 1}\left([I_5, F_t, LOC, r_t]\right) \\
+        R_5 = mRNN(\left\{M_t\right\}_{t = 1}^{T})
+        \end{array}
+
+    where :math:`V` is the visual module, :math:`I_j` are the output responses
+    per each downsampled resolution level (2x, ..., 32x), :math:`*` is the
+    convolution operator and :math:`\sigma` is the logistic sigmoid function.
+
+    Args:
+        dict_size: The total number of words of the input expression
+            dictionary encoding
+        emb_size: The size of each word embedding vector. Default: 1000
+        hid_size: The number of features in the hidden state `h`. Default: 1000
+        vis_size: The number of output channels of the visual CNN module.
+            Default: 2688
+        num_filters: The number of dynamical filters to compute based on the
+            language features. Default: 10
+        mixed_size: The number of input features to multimodal RNN.
+            Default: 1000
+        hid_mixed_size: The number of features in the multimodal hidden state.
+            Default: 1005
+        lang_layers: Number of recurrent layers in the Language RNN. Default: 3
+        mixed_layers: Number of recurrent layers in the Multimodal RNN.
+            Default: 3
+        backend: Name of the visual module backbone to use.
+            See :class:`models.dpn.model_factory` to see all the available
+            visual backbones. Default: `dpn92`
+        mix_we: If ``True``, then the word embeddings are used alongside the
+            language hidden states to compute each dynamical filter.
+            Default: ``True``
+        lstm: If ``True``, then LSTM units are used for both language and
+            multimodal RNN modules. Otherwise it uses SRU units.
+            Default: ``False``
+        pretrained: If ``False``, the Visual Module weights are initialized
+            randomly and not from ImageNet weights. Default: ``True``
+        extra: Reserved parameter to initialize dpn92 modules.
+            Default: ``True``
+        high_res: If ``True``, then the last multimodal hidden state is
+            returned as-is. Otherwise, it will apply an additional convolution
+            to produce a low-resolution segmentation map with a single channel.
+            Default: ``False``
+
+    Inputs: vis, lang
+        - **vis** of shape :math:`(1, 3, H, W)`: tensor containing an input
+        image in format RGB.
+        - **lang** of shape :math:`(1, L)`: tensor containing an referral
+        expression given as a number sequence.
+
+    Outputs: output, base_features
+        - **output** of shape :math:`(O, H/32, W/32)`: tensor containing
+        :math:`O` low resolution segmentation map features. If `high_res` is
+        ``False``, then :math:`O = 1`.
+        - **output**: a list containing all the downsampled feature maps
+        returned by the visual module as tensors of shape
+        :math:`(1, C, H/2^k, W/2^k)`, with :math:`k = 1, \cdots, 5`.
+    """
+
     def __init__(self, dict_size, emb_size=1000, hid_size=1000,
-                 vis_size=2688, num_filters=1, mixed_size=1000,
-                 hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
-                 backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, gpu_pair=None, high_res=False):
+                 vis_size=2688, num_filters=10, mixed_size=1000,
+                 hid_mixed_size=1005, lang_layers=3, mixed_layers=3,
+                 backend='dpn92', mix_we=True, lstm=False, pretrained=True,
+                 extra=True, high_res=False):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
@@ -58,47 +128,25 @@ class LangVisNet(nn.Module):
                                              out_channels=1,
                                              kernel_size=1)
 
-        self.gpu_pair = gpu_pair
-        if gpu_pair is not None:
-            # Define GPUs
-            first_gpu = int(2*gpu_pair) # 0 if gpu_pair == 0 and 2 if gpu_pair == 1
-            second_gpu = first_gpu + 1 # 1 if gpu_pair == 0 and 3 if gpu_pair == 1
-            # Assign for use in forward
-            self.first_gpu = first_gpu
-            self.second_gpu = second_gpu
-            # First GPU
-            self.base.cuda(self.first_gpu)
-            self.emb.cuda(self.first_gpu)
-            self.lang_model.cuda(self.first_gpu)
-            self.adaptative_filter.cuda(self.first_gpu)
-            self.comb_conv.cuda(self.first_gpu)
-            # Second GPU
-            self.mrnn.cuda(self.second_gpu)
-            if not self.high_res:
-                self.output_collapse.cuda(self.second_gpu)
 
     def forward(self, vis, lang):
         # Run image through base FCN
+        # vis: BxCxHxW
         vis, base_features = self.base(vis)
-        if self.gpu_pair is not None:
-            vis = vis.cuda(self.first_gpu)
 
         # Generate channels of 'x' and 'y' info
         B, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
-        if self.gpu_pair is not None:
-            spatial = spatial.cuda(self.first_gpu)
-        # (N + 8)xH/32xW/32
+
+        # Add additional visual hint feature maps.
+        # vis: (N + 8)xH/32xW/32
         vis = torch.cat([vis, spatial], dim=1)
-        if self.gpu_pair is not None:
-            vis = vis.cuda(self.first_gpu)
 
         # LxE ?
         linear_in = []
         lang_mix = []
         lang = self.emb(lang)
-        if self.gpu_pair is not None:
-            lang = lang.cuda(self.first_gpu)
+
         lang = torch.transpose(lang, 0, 1)
         if self.mix_we:
             linear_in.append(lang.squeeze(dim=1))
@@ -121,15 +169,9 @@ class LangVisNet(nn.Module):
 
         # Lx(H + E)xH/32xW/32
         lang_mix = torch.cat(lang_mix, dim=2)
-        if self.gpu_pair is not None:
-            lang_mix = lang_mix.cuda(self.first_gpu)
-
         # Size: HxL?
         linear_in = linear_in.squeeze()
-        # if self.mix_we:
         filters = self.adaptative_filter(linear_in)
-        # else:
-            # filters = self.adaptative_filter(lang)
         filters = F.sigmoid(filters)
         # LxFx(N+2)x1x1
         filters = filters.view(
@@ -147,16 +189,10 @@ class LangVisNet(nn.Module):
         # Lx(N + F + H + E + 2)xH/32xW/32
         q = torch.cat([vis, lang_mix, p], dim=2)
         # Lx1xSxH/32xW/32
-        # print(mixed.size())
 
         q = self.comb_conv(q.squeeze(1))
         q = q.unsqueeze(1)
-        # q = []
-        # for t in range(time_steps):
-        #    q.append(self.comb_conv(mixed[t]).unsqueeze(0))
-        # q = torch.cat(q)
-        # LxSx((H + W)/32)
-        # q = q.view(q.size(3) * q.size(4) * q.size(0), q.size(1), q.size(2))
+
         # Lx1xMxH/32xW/32
         q = q.view(q.size(0), q.size(1), q.size(2),
                    q.size(3) * q.size(4))
@@ -165,9 +201,6 @@ class LangVisNet(nn.Module):
         # (H*W/(32*32))xLx1xM
         q = q.view(q.size(0) * q.size(1), q.size(2), q.size(3))
         # L*(H*W/(32*32))x1xM
-        if self.gpu_pair is not None:
-            q = q.cuda(self.second_gpu)
-            self.mrnn.cuda(self.second_gpu)
         # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.mrnn(q)
 
@@ -195,7 +228,8 @@ class LangVisNet(nn.Module):
         super().load_state_dict(state)
 
     def generate_spatial_batch(self, featmap_H, featmap_W):
-        """
+        """Generate additional visual coordinates feature maps.
+
         Function taken from
         https://github.com/chenxi116/TF-phrasecut-public/blob/master/util/processing_tools.py#L5
         and slightly modified
@@ -281,7 +315,7 @@ class LangVisUpsample(nn.Module):
                  upsampling_mode='bilineal', upsampling_size=3, gpu_pair=None,
                  upsampling_amplification=32, langvis_freeze=False):
         super().__init__()
-        self.langvis = LangVisNet(dict_size, emb_size, hid_size,
+        self.langvis = BaseDMN(dict_size, emb_size, hid_size,
                                   vis_size, num_filters, mixed_size,
                                   hid_mixed_size, lang_layers, mixed_layers,
                                   backend, mix_we, lstm, pretrained,
