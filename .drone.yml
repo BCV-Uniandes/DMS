@@ -1,7 +1,7 @@
 pipeline:
+  docker:
+    runtime: nvidia
   dmn:
-    docker:
-      image: pytorch/pytorch
-      runtime: nvidia
+    image: pytorch/pytorch
     commands:
       - nvidia-smi
