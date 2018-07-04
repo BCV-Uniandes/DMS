@@ -135,7 +135,7 @@ class BaseDMN(nn.Module):
         vis, base_features = self.base(vis)
 
         # Generate channels of 'x' and 'y' info
-        B, C, H, W = vis.size()
+        _, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
 
         # Add additional visual hint feature maps.
@@ -178,8 +178,8 @@ class BaseDMN(nn.Module):
             time_steps, self.num_filters, self.vis_size + 8, 1, 1)
         p = []
         for t in range(time_steps):
-            filter = filters[t]
-            p.append(F.conv2d(input=vis, weight=filter).unsqueeze(0))
+            _filter = filters[t]
+            p.append(F.conv2d(input=vis, weight=_filter).unsqueeze(0))
 
         # LxFxH/32xW/32
         p = torch.cat(p)
@@ -213,8 +213,6 @@ class BaseDMN(nn.Module):
         output = output.view(output.size(0), output.size(1),
                              H, W)
         if not self.high_res:
-            if self.gpu_pair is not None:
-                self.output_collapse.cuda(self.second_gpu)
             output = self.output_collapse(output)
         return output, base_features
 
@@ -226,6 +224,7 @@ class BaseDMN(nn.Module):
                     state[layer] = new_state[layer]
         super().load_state_dict(state)
 
+    @classmethod
     def generate_spatial_batch(self, featmap_H, featmap_W):
         """Generate additional visual coordinates feature maps.
 
