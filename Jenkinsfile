@@ -5,7 +5,7 @@ pipeline {
             agent {
                 docker {
                     image 'pytorch/pytorch'
-                    args '--runtime=nvidia'
+                    args '--runtime=nvidia -u root'
                 }
             }
             steps {
