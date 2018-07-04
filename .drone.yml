@@ -1,0 +1,5 @@
+pipeline:
+  backend:
+    image: pytorch/pytorch
+    commands:
+      - nvidia-smi
