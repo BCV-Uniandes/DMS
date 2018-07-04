@@ -8,16 +8,15 @@
 """Setup script for LangVisNet."""
 
 # Standard library imports
-import ast
 import os
-import sys
+import ast
 import shutil
 import os.path as osp
 
 # Third party imports
 from setuptools import setup, find_packages
 
-PACKAGE = 'langvisnet'
+PACKAGE = 'dmn-pytorch'
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -41,7 +40,7 @@ def get_description():
     return data
 
 
-REQUIREMENTS = ['pytorch', 'sru', 'torchvision']
+REQUIREMENTS = []
 
 os.rename('models', PACKAGE)
 shutil.copy('referit_loader.py', PACKAGE)
@@ -87,10 +86,7 @@ try:
             'Intended Audience :: Developers',
             'Intended Audience :: Science/Research',
             'License :: OSI Approved :: MIT License',
-            'Operating System :: MacOS',
-            'Operating System :: Microsoft :: Windows',
             'Operating System :: POSIX :: Linux',
-            'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6'])
 finally:

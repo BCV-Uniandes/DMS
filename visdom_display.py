@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import LangVisUpsample
+from models import DMN
 from referit_loader import ReferDataset
 from utils.transforms import ResizeImage, ResizePad
 
@@ -23,7 +23,7 @@ from utils.transforms import ResizeImage, ResizePad
 from visdom import Visdom
 
 parser = argparse.ArgumentParser(
-    description='LangVis Segmentation Network visualization routine')
+    description='Dynamic Multimodal Network visualization routine')
 
 # Dataloading-related settings
 parser.add_argument('--data', type=str, default='../referit_data',
@@ -46,10 +46,6 @@ parser.add_argument('--batch-size', default=1, type=int,
                     help='Batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--old-weights', action='store_true', default=False,
-                    help='load LangVisNet weights on a LangVisUpsample module')
-parser.add_argument('--gpu-pair', type=int, default=None,
-                    help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -81,8 +77,6 @@ parser.add_argument('--lstm', action='store_true', default=False,
 parser.add_argument('--high-res', action='store_true',
                     help='high res version of the output through '
                          'upsampling + conv')
-parser.add_argument('--upsamp-channels', default=50, type=int,
-                    help='number of channels in the upsampling convolutions')
 parser.add_argument('--upsamp-mode', default='bilinear', type=str,
                     help='upsampling interpolation mode')
 parser.add_argument('--upsamp-size', default=3, type=int,
@@ -141,34 +135,27 @@ refer = ReferDataset(data_root=args.data,
 
 loader = DataLoader(refer, batch_size=args.batch_size, shuffle=True)
 
-net = LangVisUpsample(dict_size=len(refer.corpus),
-                      emb_size=args.emb_size,
-                      hid_size=args.hid_size,
-                      vis_size=args.vis_size,
-                      num_filters=args.num_filters,
-                      mixed_size=args.mixed_size,
-                      hid_mixed_size=args.hid_mixed_size,
-                      lang_layers=args.lang_layers,
-                      mixed_layers=args.mixed_layers,
-                      backend=args.backend,
-                      mix_we=args.mix_we,
-                      lstm=args.lstm,
-                      high_res=args.high_res,
-                      upsampling_channels=args.upsamp_channels,
-                      upsampling_mode=args.upsamp_mode,
-                      upsampling_size=args.upsamp_size,
-                      gpu_pair=args.gpu_pair,
-                      upsampling_amplification=args.upsamp_amplification)
+net = DMN(dict_size=len(refer.corpus),
+          emb_size=args.emb_size,
+          hid_size=args.hid_size,
+          vis_size=args.vis_size,
+          num_filters=args.num_filters,
+          mixed_size=args.mixed_size,
+          hid_mixed_size=args.hid_mixed_size,
+          lang_layers=args.lang_layers,
+          mixed_layers=args.mixed_layers,
+          backend=args.backend,
+          mix_we=args.mix_we,
+          lstm=args.lstm,
+          high_res=args.high_res,
+          upsampling_mode=args.upsamp_mode,
+          upsampling_size=args.upsamp_size,
+          upsampling_amplification=args.upsamp_amplification)
 
 
 if osp.exists(args.snapshot):
     print('Loading state dict')
     snapshot_dict = torch.load(args.snapshot)
-    if args.old_weights:
-        state = {}
-        for weight_name in snapshot_dict.keys():
-            state['langvis.' + weight_name] = snapshot_dict[weight_name]
-        snapshot_dict = state
     net.load_state_dict(snapshot_dict)
 
 if args.cuda:

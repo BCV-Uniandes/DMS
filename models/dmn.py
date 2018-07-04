@@ -204,11 +204,10 @@ class BaseDMN(nn.Module):
         # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.mrnn(q)
 
-        """
-        Take all the hidden states (one for each pixel of every
-        'length of the sequence') but keep only the last H * W
-        so that it can be reshaped to an image of such size
-        """
+
+        # Take all the hidden states (one for each pixel of every
+        # 'length of the sequence') but keep only the last H * W
+        # so that it can be reshaped to an image of such size
         output = output[-(H * W):, :, :]
         output = output.permute(1, 2, 0).contiguous()
         output = output.view(output.size(0), output.size(1),
@@ -371,24 +370,53 @@ class DMN(nn.Module):
     convolution operator and :math:`\sigma` is the logistic sigmoid function.
 
     Args:
-        in_channels: The total number of input features incoming from the
-            multimodal module
-        mode: Usampling mode, see :class:`torch.nn.Upsample`.
+        dict_size: The total number of words of the input expression
+            dictionary encoding
+        emb_size: The size of each word embedding vector. Default: 1000
+        hid_size: The number of features in the hidden state `h`. Default: 1000
+        vis_size: The number of output channels of the visual CNN module.
+            Default: 2688
+        num_filters: The number of dynamical filters to compute based on the
+            language features. Default: 10
+        mixed_size: The number of input features to multimodal RNN.
+            Default: 1000
+        hid_mixed_size: The number of features in the multimodal hidden state.
+            Default: 1005
+        lang_layers: Number of recurrent layers in the Language RNN. Default: 3
+        mixed_layers: Number of recurrent layers in the Multimodal RNN.
+            Default: 3
+        backend: Name of the visual module backbone to use.
+            See :class:`models.dpn.model_factory` to see all the available
+            visual backbones. Default: `dpn92`
+        mix_we: If ``True``, then the word embeddings are used alongside the
+            language hidden states to compute each dynamical filter.
+            Default: ``True``
+        lstm: If ``True``, then LSTM units are used for both language and
+            multimodal RNN modules. Otherwise it uses SRU units.
+            Default: ``False``
+        pretrained: If ``False``, the Visual Module weights are initialized
+            randomly and not from ImageNet weights. Default: ``True``
+        extra: Reserved parameter to initialize dpn92 modules.
+            Default: ``True``
+        high_res: If ``True``, then the last multimodal hidden state is
+            returned as-is. Otherwise, it will apply an additional convolution
+            to produce a low-resolution segmentation map with a single channel.
+            Default: ``False``
+        upsampling_mode: Usampling mode, see :class:`torch.nn.Upsample`.
             Default: `bilineal`
-        ker_size: Kernel size for each convolution step. Default: 3
-        amplification: Amplification zoom to apply, it must be a power
-            of two. Default: 32
-        non_linearity: If ``True``, it will apply a :class:`torch.nn.PReLU`
-            activation in-between upsampling steps. Default: ``False``
-        feature_channels: Expected number of feature channels per
-            each visual map. Default:  `[2688, 1552, 704, 336, 64]`
+        upsampling_size: Kernel size for each upsampling convolution step.
+            Default: 3
+        upsampling_amplification: Amplification zoom to apply, it must be a
+            power of two. Default: 32
+        dmn_freeze: If ``True``, only the upsampling module is trained.
+            Default: ``False``
 
-    Inputs: x, features
-        - **x** of shape :math:`(O, H/32, W/32)`: tensor containing
-        :math:`O` low resolution segmentation map features.
-        - **features** a list containing all the downsampled feature maps
-        returned by the visual module as tensors of shape
-        :math:`(1, C, H/2^k, W/2^k)`, with :math:`k = 1, \cdots, 5`.
+
+    Inputs: vis, lang
+        - **vis** of shape :math:`(1, 3, H, W)`: tensor containing an input
+        image in format RGB.
+        - **lang** of shape :math:`(1, L)`: tensor containing an referral
+        expression given as a number sequence.
 
     Outputs: out
         - **output** of shape :math:`(1, H/\log_2{ampl}, W/\log_2{ampl})`:
@@ -399,31 +427,31 @@ class DMN(nn.Module):
                  vis_size=2688, num_filters=1, mixed_size=1000,
                  hid_mixed_size=1005, lang_layers=2, mixed_layers=3,
                  backend='dpn92', mix_we=False, lstm=False, pretrained=True,
-                 extra=True, high_res=False, upsampling_channels=50,
+                 extra=True, high_res=False,
                  upsampling_mode='bilineal', upsampling_size=3,
-                 upsampling_amplification=32, langvis_freeze=False):
+                 upsampling_amplification=32, dmn_freeze=False):
         super().__init__()
         self.langvis = BaseDMN(dict_size, emb_size, hid_size,
-                                  vis_size, num_filters, mixed_size,
-                                  hid_mixed_size, lang_layers, mixed_layers,
-                                  backend, mix_we, lstm, pretrained,
-                                  extra, high_res)
+                               vis_size, num_filters, mixed_size,
+                               hid_mixed_size, lang_layers, mixed_layers,
+                               backend, mix_we, lstm, pretrained,
+                               extra, high_res)
         self.high_res = high_res
-        self.langvis_freeze = langvis_freeze
+        self.dmn_freeze = dmn_freeze
         if high_res:
             self.upsample = UpsamplingModule(
-                hid_mixed_size, upsampling_channels, mode=upsampling_mode,
+                hid_mixed_size, mode=upsampling_mode,
                 ker_size=upsampling_size,
                 amplification=upsampling_amplification)
-        if langvis_freeze:
+        if dmn_freeze:
             self.langvis.eval()
 
     def forward(self, vis, lang):
-        if self.langvis_freeze:
+        if self.dmn_freeze:
             vis = vis.detach()
             lang = lang.detach()
         out, features = self.langvis(vis, lang)
-        if self.langvis_freeze:
+        if self.dmn_freeze:
             out = Variable(out.data)
         if self.high_res:
             out = self.upsample(out, features)

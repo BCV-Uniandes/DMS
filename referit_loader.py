@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-ReferIt, UNC, UNC+ and GRef referring image segmentation PyTorch dataset
-Define and group batches of images, segmentations and queries.
+ReferIt, UNC, UNC+ and GRef referring image segmentation PyTorch dataset.
 
+Define and group batches of images, segmentations and queries.
 Based on:
 https://github.com/chenxi116/TF-phrasecut-public/blob/master/build_batches.py
 """

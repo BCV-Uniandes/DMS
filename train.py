@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""
-QSegNet train routines. (WIP)
-"""
+"""DMN training routines."""
 
 # Standard lib imports
 import os
 import time
 import argparse
 import os.path as osp
-# import multiprocessing
 from urllib.parse import urlparse
-
-# multiprocessing.set_start_method("spawn", force=True)
 
 # PyTorch imports
 import torch
@@ -27,7 +22,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 # Local imports
 from utils import AverageMeter
 from utils.losses import IoULoss
-from models import LangVisUpsample
+from models import DMN
 from referit_loader import ReferDataset
 from utils.misc_utils import VisdomWrapper
 from utils.transforms import ResizeImage, ResizeAnnotation
@@ -38,7 +33,7 @@ from tqdm import tqdm
 
 
 parser = argparse.ArgumentParser(
-    description='Query Segmentation Network training routine')
+    description='Dynamic Multimodal Network training routine')
 
 # Dataloading-related settings
 parser.add_argument('--data', type=str, default='../referit_data',
@@ -86,12 +81,6 @@ parser.add_argument('--start-epoch', type=int, default=1,
 parser.add_argument('--optim-snapshot', type=str,
                     default='weights/qsegnet_optim.pth',
                     help='path to optimizer state snapshot')
-parser.add_argument('--old-weights', action='store_true', default=False,
-                    help='load LangVisNet weights on a LangVisUpsample module')
-parser.add_argument('--norm', action='store_true',
-                    help='enable language/visual features L2 normalization')
-parser.add_argument('--gpu-pair', type=int, default=None,
-                    help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
 parser.add_argument('--accum-iters', default=100, type=int,
                      help='number of gradient accumulated iterations to wait '
                           'before update')
@@ -128,15 +117,13 @@ parser.add_argument('--lstm', action='store_true', default=False,
 parser.add_argument('--high-res', action='store_true',
                     help='high res version of the output through '
                          'upsampling + conv')
-parser.add_argument('--upsamp-channels', default=50, type=int,
-                    help='number of channels in the upsampling convolutions')
 parser.add_argument('--upsamp-mode', default='bilinear', type=str,
                     help='upsampling interpolation mode')
 parser.add_argument('--upsamp-size', default=3, type=int,
                     help='upsampling convolution kernel size')
 parser.add_argument('--upsamp-amplification', default=32, type=int,
                     help='upsampling scale factor')
-parser.add_argument('--langvis-freeze', action='store_true', default=False,
+parser.add_argument('--dmn-freeze', action='store_true', default=False,
                     help='freeze low res model and train only '
                          'upsampling layers')
 
@@ -172,13 +159,11 @@ input_transform = Compose([
 
 # If we are in 'low res' mode, downsample the target
 target_transform = Compose([
-    # ToTensor(),
     ResizeAnnotation(args.size),
 ])
 
 if args.high_res:
     target_transform = Compose([
-        # ToTensor()
     ])
 
 if args.batch_size == 1:
@@ -212,34 +197,27 @@ if not osp.exists(args.save_folder):
     os.makedirs(args.save_folder)
 
 
-net = LangVisUpsample(dict_size=len(refer.corpus),
-                      emb_size=args.emb_size,
-                      hid_size=args.hid_size,
-                      vis_size=args.vis_size,
-                      num_filters=args.num_filters,
-                      mixed_size=args.mixed_size,
-                      hid_mixed_size=args.hid_mixed_size,
-                      lang_layers=args.lang_layers,
-                      mixed_layers=args.mixed_layers,
-                      backend=args.backend,
-                      mix_we=args.mix_we,
-                      lstm=args.lstm,
-                      high_res=args.high_res,
-                      upsampling_channels=args.upsamp_channels,
-                      upsampling_mode=args.upsamp_mode,
-                      upsampling_size=args.upsamp_size,
-                      gpu_pair=args.gpu_pair,
-                      upsampling_amplification=args.upsamp_amplification,
-                      langvis_freeze=args.langvis_freeze)
+net = DMN(dict_size=len(refer.corpus),
+          emb_size=args.emb_size,
+          hid_size=args.hid_size,
+          vis_size=args.vis_size,
+          num_filters=args.num_filters,
+          mixed_size=args.mixed_size,
+          hid_mixed_size=args.hid_mixed_size,
+          lang_layers=args.lang_layers,
+          mixed_layers=args.mixed_layers,
+          backend=args.backend,
+          mix_we=args.mix_we,
+          lstm=args.lstm,
+          high_res=args.high_res,
+          upsampling_mode=args.upsamp_mode,
+          upsampling_size=args.upsamp_size,
+          upsampling_amplification=args.upsamp_amplification,
+          dmn_freeze=args.dmn_freeze)
 
 if osp.exists(args.snapshot):
     print('Loading state dict from: {0}'.format(args.snapshot))
     snapshot_dict = torch.load(args.snapshot)
-    if args.old_weights:
-        state = {}
-        for weight_name in snapshot_dict.keys():
-            state['langvis.' + weight_name] = snapshot_dict[weight_name]
-        snapshot_dict = state
     net.load_state_dict(snapshot_dict)
 
 if args.cuda:
@@ -256,14 +234,6 @@ if args.visdom is not None:
           args.visdom, port))
     vis = VisdomWrapper(server=visdom_url.geturl(), port=port, env=args.env)
 
-    # vis.init_line_plot('iteration_plt', xlabel='Iteration', ylabel='Loss',
-    #                    title='Current QSegNet Training Loss',
-    #                    legend=['Loss'])
-    #
-    # vis.init_line_plot('epoch_plt', xlabel='Epoch', ylabel='Loss',
-    #                    title='Current QSegNet Epoch Loss',
-    #                    legend=['Loss'])
-
     if args.val is not None:
         vis.init_line_plot('val_plt', xlabel='Epoch', ylabel='IoU',
                            title='Current Model IoU Value',
@@ -276,7 +246,6 @@ scheduler = ReduceLROnPlateau(
 
 if osp.exists(args.optim_snapshot):
     optimizer.load_state_dict(torch.load(args.optim_snapshot))
-    # last_epoch = args.start_epoch
 
 scheduler.step(args.start_epoch)
 
@@ -288,10 +257,8 @@ if args.iou_loss:
 def train(epoch):
     net.train()
     total_loss = AverageMeter()
-    # total_loss = 0
     epoch_loss_stats = AverageMeter()
     time_stats = AverageMeter()
-    # epoch_total_loss = 0
     start_time = time.time()
     optimizer.zero_grad()
     loss = 0
@@ -304,11 +271,6 @@ def train(epoch):
             imgs = imgs.cuda()
             masks = masks.cuda()
             words = words.cuda()
-
-        if args.cuda and args.gpu_pair is not None:
-            imgs = imgs.cuda(2*args.gpu_pair)
-            masks = masks.cuda(2*args.gpu_pair)
-            words = words.cuda(2*args.gpu_pair)
 
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
@@ -324,12 +286,10 @@ def train(epoch):
 
             total_loss.update(loss.data[0], imgs.size(0))
             epoch_loss_stats.update(loss.data[0], imgs.size(0))
-            # time_stats.update(time.time() - start_time)
-            # start_time = time.time()
+            time_stats.update(time.time() - start_time)
+            start_time = time.time()
             loss = 0
             optimizer.zero_grad()
-        # total_loss += loss.data[0]
-        # epoch_total_loss += total_loss
 
         if args.visdom is not None:
             cur_iter = batch_idx + (epoch - 1) * len(train_loader)
@@ -352,9 +312,7 @@ def train(epoch):
             torch.save(state_dict, optim_filename)
 
         if batch_idx % args.log_interval == 0:
-            elapsed_time = time.time() - start_time
-            # elapsed_time = time_stats.avg
-            # cur_loss = total_loss / args.log_interval
+            elapsed_time = time_stats.avg
             print('[{:5d}] ({:5d}/{:5d}) | ms/batch {:.6f} |'
                   ' loss {:.6f} | lr {:.7f}'.format(
                       epoch, batch_idx, len(train_loader),
@@ -362,7 +320,6 @@ def train(epoch):
                       optimizer.param_groups[0]['lr']))
             total_loss.reset()
 
-        # total_loss = 0
         start_time = time.time()
 
     epoch_total_loss = epoch_loss_stats.avg
@@ -372,40 +329,6 @@ def train(epoch):
                       X=torch.ones((1, 1)).cpu() * epoch,
                       Y=torch.Tensor([epoch_total_loss]).unsqueeze(0).cpu(),
                       update='append')
-    return epoch_total_loss
-
-
-def validate(epoch):
-    net.eval()
-    epoch_total_loss = AverageMeter()
-    start_time = time.time()
-    for batch_idx, (imgs, masks, words) in enumerate(val_loader):
-        imgs = Variable(imgs, volatile=True)
-        masks = Variable(masks.squeeze(), volatile=True)
-        words = Variable(words, volatile=True)
-
-        if args.cuda:
-            imgs = imgs.cuda()
-            masks = masks.cuda()
-            words = words.cuda()
-
-        out_masks = net(imgs, words)
-        out_masks = F.upsample(out_masks, size=(
-            masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        loss = criterion(out_masks, masks)
-        epoch_total_loss.update(loss.data[0], imgs.size(0))
-
-    epoch_total_loss = epoch_total_loss.avg
-    elapsed_time = time.time() - start_time
-    print('[{:5d}] Validation | elapsed time (ms) {:.6f} |'
-          ' loss {:.6f}'.format(
-              epoch, elapsed_time * 1000, epoch_total_loss))
-    if args.visdom is not None:
-        vis.plot_line('val_plt',
-                      X=torch.ones((1, 1)).cpu() * epoch,
-                      Y=torch.Tensor([epoch_total_loss]).unsqueeze(0).cpu(),
-                      update='append')
-
     return epoch_total_loss
 
 
@@ -419,10 +342,7 @@ def compute_mask_IU(masks, target):
 
 def evaluate(epoch=0):
     net.train()
-    score_thresh = np.concatenate([# [0],
-                                   # np.logspace(start=-16, stop=-2, num=10,
-                                   #             endpoint=True),
-                                   np.arange(start=0.00, stop=0.96,
+    score_thresh = np.concatenate([np.arange(start=0.00, stop=0.96,
                                              step=0.025)]).tolist()
     cum_I = torch.zeros(len(score_thresh))
     cum_U = torch.zeros(len(score_thresh))
@@ -432,10 +352,6 @@ def evaluate(epoch=0):
     seg_total = 0
     start_time = time.time()
     for img, mask, phrase in tqdm(val_loader, dynamic_ncols=True):
-        # img, mask, phrase = refer_val.pull_item(i)
-        # words = refer_val.tokenize_phrase(phrase)
-        # h, w, _ = img.shape
-        # img = input_transform(img)
         imgs = Variable(img, volatile=True)
         mask = mask.squeeze()
         words = Variable(phrase, volatile=True)
@@ -448,10 +364,6 @@ def evaluate(epoch=0):
         out = F.sigmoid(out)
         out = F.upsample(out, size=(
             mask.size(-2), mask.size(-1)), mode='bilinear').squeeze()
-        # out = out.squeeze().data.cpu().numpy()
-        # out = out.squeeze()
-        # out = (out >= score_thresh).astype(np.uint8)
-        # out = target_transform(out, (h, w))
 
         inter = torch.zeros(len(score_thresh))
         union = torch.zeros(len(score_thresh))
@@ -459,10 +371,9 @@ def evaluate(epoch=0):
             thresholded_out = (out > thresh).float().data
             try:
                 inter[idx], union[idx] = compute_mask_IU(thresholded_out, mask)
-            except AssertionError as e:
+            except AssertionError:
                 inter[idx] = 0
                 union[idx] = mask.sum()
-                # continue
 
         cum_I += inter
         cum_U += union
