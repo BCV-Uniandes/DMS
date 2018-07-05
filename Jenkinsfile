@@ -19,6 +19,7 @@ pipeline {
                 sh 'conda install aria2 -c bioconda'
                 sh 'git clone https://github.com/taolei87/sru.git'
                 sh 'cd sru && pip install -U . --no-deps && cd .. & rm -rf sru'
+                sh 'python -c "from sru import SRU"'
                 sh 'bash download_data.sh -p $HOME/referit_data'
             }
         }
