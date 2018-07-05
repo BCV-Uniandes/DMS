@@ -13,7 +13,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh 'pip install opencv-python pydocstyle cupy-cuda91'
+                sh 'pip install opencv-python pydocstyle cupy-cuda90'
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout'
                 sh 'conda install mccabe flake8 pycodestyle'
                 sh 'conda install aria2 -c bioconda'
