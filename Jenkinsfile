@@ -17,11 +17,7 @@ pipeline {
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout'
                 sh 'conda install mccabe flake8 pycodestyle'
                 sh 'conda install aria2 -c bioconda'
-                sh 'git clone https://github.com/taolei87/sru.git'
-                sh 'cd sru'
-                sh 'ls'
-                sh 'pip install -U . --no-deps'
-                sh 'cd ..'
+                sh 'pip install -q --no-deps https://github.com/taolei87/sru'
                 sh 'python -c "from sru import SRU"'
                 sh 'bash download_data.sh -p $HOME/referit_data'
             }
