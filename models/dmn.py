@@ -128,7 +128,6 @@ class BaseDMN(nn.Module):
                                              out_channels=1,
                                              kernel_size=1)
 
-
     def forward(self, vis, lang):
         # Run image through base FCN
         # vis: BxCxHxW
@@ -203,7 +202,6 @@ class BaseDMN(nn.Module):
         # L*(H*W/(32*32))x1xM
         # input has dimensions: seq_length x batch_size x mix_size
         output, _ = self.mrnn(q)
-
 
         # Take all the hidden states (one for each pixel of every
         # 'length of the sequence') but keep only the last H * W

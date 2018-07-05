@@ -82,10 +82,10 @@ parser.add_argument('--optim-snapshot', type=str,
                     default='weights/qsegnet_optim.pth',
                     help='path to optimizer state snapshot')
 parser.add_argument('--accum-iters', default=100, type=int,
-                     help='number of gradient accumulated iterations to wait '
-                          'before update')
+                    help='number of gradient accumulated iterations to wait '
+                         'before update')
 parser.add_argument('--pin-memory', default=False, action='store_true',
-                     help='enable CUDA memory pin on DataLoader')
+                    help='enable CUDA memory pin on DataLoader')
 
 # Model settings
 parser.add_argument('--size', default=512, type=int,
@@ -387,7 +387,7 @@ def evaluate(epoch=0):
 
         if seg_total != 0 and seg_total % args.log_interval + 800 == 0:
             temp_cum_iou = cum_I / cum_U
-            _, which = torch.max(temp_cum_iou,0)
+            _, which = torch.max(temp_cum_iou, 0)
             which = which.numpy()
             print(' ')
             print('Accumulated IoUs at different thresholds:')
@@ -396,7 +396,7 @@ def evaluate(epoch=0):
             print('+' + '-' * 34 + '+')
             for idx, thresh in enumerate(score_thresh):
                 this_string = ('| {:<15.3E}| {:<15.8f} | <--'
-                    if idx == which else '| {:<15.3E}| {:<15.8f} |')
+                               if idx == which else '| {:<15.3E}| {:<15.8f} |')
                 print(this_string.format(thresh, temp_cum_iou[idx]))
             print('+' + '-' * 34 + '+')
 

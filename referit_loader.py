@@ -25,6 +25,7 @@ from utils import Corpus
 
 cv2.setNumThreads(0)
 
+
 class DatasetNotFoundError(Exception):
     pass
 
