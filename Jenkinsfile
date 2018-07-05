@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'pytorch/pytorch'
-            args '--runtime=nvidia -u root -v $HOME/referit_data:/root/referit_data -v $HOME/data:/root/data'
+            args '--runtime=nvidia -u root -v $HOME/referit_data:/root/referit_data -v $HOME/data:/root/data -e PYTHONIOENCODING=UTF-8'
         }
     }
 
