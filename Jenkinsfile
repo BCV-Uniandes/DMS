@@ -10,7 +10,7 @@ pipeline {
             steps {
                 sh 'pip install opencv-python pydocstyle cupy-cuda91'
                 sh 'conda install mccabe flake8 pycodestyle'
-                sh 'git clone https://github.com:taolei87/sru.git'
+                sh 'git clone https://github.com/taolei87/sru.git'
                 sh 'cd sru && pip install -U . --no-deps && cd .. & rm -rf sru'
             }
         }
