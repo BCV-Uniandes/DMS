@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from models import DMN
-from referit_loader import ReferDataset
-from utils.transforms import ResizeImage, ResizePad
+from dmn_pytorch.models import DMN
+from dmn_pytorch.referit_loader import ReferDataset
+from dmn_pytorch.utils.transforms import ResizeImage, ResizePad
 
 # Other imports
 from visdom import Visdom

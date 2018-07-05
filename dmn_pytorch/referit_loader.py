@@ -21,7 +21,7 @@ from referit import REFER
 import torch.utils.data as data
 from referit.refer import mask as cocomask
 
-from utils import Corpus
+from dmn_pytorch.utils import Corpus
 
 cv2.setNumThreads(0)
 

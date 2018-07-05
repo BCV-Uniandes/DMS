@@ -20,12 +20,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import Compose, ToTensor, Normalize
 
 # Local imports
-from utils import AverageMeter
-from utils.losses import IoULoss
-from models import DMN
-from referit_loader import ReferDataset
-from utils.misc_utils import VisdomWrapper
-from utils.transforms import ResizeImage, ResizeAnnotation
+from dmn_pytorch.utils import AverageMeter
+from dmn_pytorch.utils.losses import IoULoss
+from dmn_pytorch.models import DMN
+from dmn_pytorch.referit_loader import ReferDataset
+from dmn_pytorch.utils.misc_utils import VisdomWrapper
+from dmn_pytorch.utils.transforms import ResizeImage, ResizeAnnotation
 
 # Other imports
 import numpy as np
