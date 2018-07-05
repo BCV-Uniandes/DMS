@@ -8,8 +8,6 @@ pipeline {
 
     environment {
         CODECOV_TOKEN = 'afac3345-89ec-41cd-b9ce-17206e10a585'
-        LANG = 'en_US.UTF-8'
-        LANGUAGE = 'en_US:en'
     }
 
     stages {
@@ -19,7 +17,7 @@ pipeline {
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout'
                 sh 'conda install mccabe flake8 pycodestyle'
                 sh 'conda install aria2 -c bioconda'
-                sh 'pip install --no-deps git+https://github.com/taolei87/sru.git'
+                sh 'PYTHONIOENCODING="UTF-8" pip install --no-deps git+https://github.com/taolei87/sru.git'
                 sh 'python -c "from sru import SRU"'
                 sh 'bash download_data.sh -p $HOME/referit_data'
             }
