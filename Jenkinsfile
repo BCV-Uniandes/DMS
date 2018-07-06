@@ -18,7 +18,8 @@ pipeline {
                 sh 'pip install opencv-python pydocstyle cupy-cuda90 pynvrtc'
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout progressbar2'
                 sh 'conda install mccabe flake8 pycodestyle'
-                sh 'export PYTHONIOENCODING=utf-8 && pip install --no-deps git+https://github.com/andfoy/sru.git@encoding'
+                sh 'pip install --no-deps git+https://github.com/andfoy/sru.git@encoding'
+                sh 'pip install git+https://github.com/andfoy/refer.git'
                 sh 'python -c "from sru import SRU"'
             }
         }
