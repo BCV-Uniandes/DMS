@@ -13,6 +13,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
+                sh 'apt-get install libgtk2.0-dev -y'
                 sh 'pip install opencv-python pydocstyle cupy-cuda90 pynvrtc'
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout'
                 sh 'conda install mccabe flake8 pycodestyle'
