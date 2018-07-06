@@ -61,11 +61,12 @@ def dmn_fixture_lowres(loader_fixture):
 
 def test_dmn_forward_lowres(dmn_fixture_lowres, loader_fixture):
     dmn = BaseDMN(**dmn_fixture_lowres)
+    dmn = dmn.cuda()
     for i in range(0, 10):
         img, mask, phrase = loader_fixture[i]
         img = img.cuda().unsqueeze(0)
         mask = mask.cuda()
-        phrase = phrase.cuda()
+        phrase = phrase.cuda().unsqueeze(0)
         with torch.no_grad():
             out = dmn(img, phrase)
         assert out.size == (img.size(-2) // 32, img.size(-1) // 32)
