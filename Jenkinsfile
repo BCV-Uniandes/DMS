@@ -36,7 +36,7 @@ pipeline {
                 sh 'ls /root/referit_data'
                 sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider --cache-clear'
                 sh 'codecov'
-                sh 'find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
+                sh 'py3clean'
               }
             }
           }
