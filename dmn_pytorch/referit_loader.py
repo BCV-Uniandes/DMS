@@ -9,6 +9,7 @@ https://github.com/chenxi116/TF-phrasecut-public/blob/master/build_batches.py
 """
 
 import os
+import sys
 import cv2
 import json
 import uuid
@@ -20,8 +21,10 @@ import scipy.io as sio
 from referit import REFER
 import torch.utils.data as data
 from referit.refer import mask as cocomask
-
+import dmn_pytorch.utils
 from dmn_pytorch.utils import Corpus
+
+sys.modules['utils'] = dmn_pytorch.utils
 
 cv2.setNumThreads(0)
 
