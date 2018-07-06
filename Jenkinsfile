@@ -16,9 +16,8 @@ pipeline {
                 sh 'apt-get update'
                 sh 'apt-get install libgtk2.0-dev -y'
                 sh 'pip install opencv-python pydocstyle cupy-cuda90 pynvrtc'
-                sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout'
+                sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout progressbar2'
                 sh 'conda install mccabe flake8 pycodestyle'
-                sh 'conda install aria2 -c bioconda'
                 sh 'export PYTHONIOENCODING=utf-8 && pip install --no-deps git+https://github.com/andfoy/sru.git@encoding'
                 sh 'python -c "from sru import SRU"'
             }
