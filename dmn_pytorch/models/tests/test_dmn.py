@@ -4,6 +4,7 @@
 
 # Standard Lib imports
 import os
+import math
 import os.path as osp
 
 # PyTorch imports
@@ -70,5 +71,5 @@ def test_dmn_forward_lowres(dmn_fixture_lowres, loader_fixture):
         with torch.no_grad():
             out, _ = dmn(img, phrase)
         assert out.size() == (
-            1, 1, torch.ceil(img.size(-2) / 32), img.size(-1) // 32)
+            1, 1, math.ceil(img.size(-2) / 32), img.size(-1) // 32)
     del dmn
