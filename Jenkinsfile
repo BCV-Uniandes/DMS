@@ -33,7 +33,7 @@ pipeline {
             stage('Model Forward Pass') {
               steps {
                 sh 'nvidia-smi'
-                sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider'
+                sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider --cache-clear'
                 sh 'codecov'
               }
             }
