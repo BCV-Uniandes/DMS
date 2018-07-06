@@ -36,7 +36,7 @@ pipeline {
                 sh 'ls /root/referit_data'
                 sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider --cache-clear'
                 sh 'codecov'
-                sh 'find . -regex ".*\(__pycache__\|\.py[co]\)" -delete'
+                sh 'find . -regex \'.*\\(__pycache__\\|\\.py[co]\\)\' -delete'
               }
             }
           }
