@@ -17,7 +17,7 @@ pipeline {
                 sh 'apt-get install libgtk2.0-dev -y'
                 sh 'pip install opencv-python pydocstyle cupy-cuda90 pynvrtc'
                 sh 'pip install pytest pytest-cov flaky codecov pytest-xvfb pytest-timeout progressbar2'
-                sh 'conda install mccabe flake8 pycodestyle'
+                sh 'conda install mccabe flake8 pycodestyle cython'
                 sh 'pip install --no-deps git+https://github.com/andfoy/sru.git@encoding'
                 sh 'pip install git+https://github.com/andfoy/refer.git'
                 sh 'python -c "from sru import SRU"'
