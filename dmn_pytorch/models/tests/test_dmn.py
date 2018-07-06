@@ -68,6 +68,6 @@ def test_dmn_forward_lowres(dmn_fixture_lowres, loader_fixture):
         mask = mask.cuda()
         phrase = phrase.cuda().unsqueeze(0)
         with torch.no_grad():
-            out = dmn(img, phrase)
+            out, _ = dmn(img, phrase)
         assert out.size == (img.size(-2) // 32, img.size(-1) // 32)
     del dmn
