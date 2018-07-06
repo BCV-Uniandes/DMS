@@ -27,7 +27,7 @@ pipeline {
           parallel {
             stage('Code Linting') {
               steps {
-                  sh 'flake8 --exclude=*/optimizers/*,*/dpn/*,*/test/* --max-complexity 16 .'
+                  sh 'flake8 --exclude=*/optimizers/*,*/dpn/*,*/tests/*,*__init__* --max-complexity 16 .'
               }
             }
             stage('Model Forward Pass') {
@@ -36,6 +36,7 @@ pipeline {
                 sh 'ls /root/referit_data'
                 sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider --cache-clear'
                 sh 'codecov'
+                sh 'find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
               }
             }
           }
