@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'pytorch/pytorch:0.4-cuda9-cudnn7-devel'
-            args '--runtime=nvidia -u root -v $HOME/referit_data:/root/referit_data -e PYTHONIOENCODING=UTF-8'
+            args '--runtime=nvidia -u root -v /media/SSD1/referit_data:/root/referit_data -e PYTHONIOENCODING=UTF-8'
         }
     }
 
@@ -33,6 +33,7 @@ pipeline {
             stage('Model Forward Pass') {
               steps {
                 sh 'nvidia-smi'
+                sh 'ls /root/referit_data'
                 sh 'pytest dmn_pytorch --cov=dmn_pytorch --cov-report term-missing -v -p no:cacheprovider --cache-clear'
                 sh 'codecov'
               }
