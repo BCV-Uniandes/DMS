@@ -3,6 +3,8 @@ Semantic Segmentation based on Natural Language Queries (WIP)
 
 ## Project status
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![codecov](https://codecov.io/gh/andfoy/query-objseg/branch/master/graph/badge.svg?token=99Q4tadxnT)](https://codecov.io/gh/andfoy/query-objseg)
+[![Build Status](http://157.253.243.11/job/query-objseg/job/master/badge/icon)](http://157.253.243.11/job/query-objseg/job/master/)
 
 ## Dependencies
 
