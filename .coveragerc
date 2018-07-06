@@ -5,6 +5,8 @@ omit =
 	*/external/*
 	*.pxd
 	*__init__*
+  *model_factory*
+  *adaptive_avgmax_pool*
 
 [report]
 fail_under = 0
