@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'pytorch/pytorch:0.4-cuda9-cudnn7-devel'
-            args '--runtime=nvidia -u root -v $HOME/referit_data:/root/referit_data -v $HOME/data:/root/data -e PYTHONIOENCODING=UTF-8'
+            args '--runtime=nvidia -u root -v $HOME/referit_data:/root/referit_data -e PYTHONIOENCODING=UTF-8'
         }
     }
 
