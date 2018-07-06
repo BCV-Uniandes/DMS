@@ -33,9 +33,9 @@ def loader_fixture():
     ])
     path = osp.join(os.environ['HOME'], 'referit_data')
     split_path = osp.join(os.environ['HOME'], 'data')
-    loader = ReferDataset(path, split_path, 'gref', input_transform,
+    loader = ReferDataset(path, split_path, 'unc', input_transform,
                           target_transform,
-                          'val', -1)
+                          'trainA', -1)
     return loader
 
 @pytest.fixture
