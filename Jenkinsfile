@@ -21,7 +21,6 @@ pipeline {
                 sh 'conda install aria2 -c bioconda'
                 sh 'export PYTHONIOENCODING=utf-8 && pip install --no-deps git+https://github.com/andfoy/sru.git@encoding'
                 sh 'python -c "from sru import SRU"'
-                sh 'bash download_data.sh -p $HOME/referit_data'
             }
         }
         stage('Run Tests') {
