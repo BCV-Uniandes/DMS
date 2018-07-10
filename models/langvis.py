@@ -37,9 +37,6 @@ class LangVisNet(nn.Module):
         vis, base_features = self.base(vis)
         vis = vis.requires_grad_()
 
-        if self.gpu_pair is not None:
-            vis = vis.cuda(self.first_gpu)
-
         # Generate channels of 'x' and 'y' info
         B, C, H, W = vis.size()
         # spatial = self.generate_spatial_batch(H, W)
