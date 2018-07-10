@@ -14,7 +14,7 @@ from .dpn.model_factory import create_model
 
 class LangVisNet(nn.Module):
     def __init__(self, backend='dpn92', pretrained=True, extra=True,
-                 high_res=False, vis_size=4688):
+                 high_res=False, vis_size=2688):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
@@ -132,7 +132,7 @@ class UpsamplingModule(nn.Module):
 
 
 class LangVisUpsample(nn.Module):
-    def __init__(self, backend='dpn92', vis_size=4688, high_res=False):
+    def __init__(self, backend='dpn92', vis_size=2688, high_res=False):
         super().__init__()
         self.high_res = high_res
         self.langvis = LangVisNet(high_res=high_res, backend=backend,

@@ -351,8 +351,8 @@ def train(epoch):
         train_sampler.set_epoch(epoch)
     for batch_idx, (imgs, masks, words) in enumerate(train_loader):
         imgs = imgs.requires_grad_()
-        masks = masks.requires_grad_().squeeze()
-        words = words.requires_grad_()
+        # masks = masks.requires_grad_().squeeze()
+        # words = words.requires_grad_()
 
         if args.cuda:
             imgs = imgs.cuda()
