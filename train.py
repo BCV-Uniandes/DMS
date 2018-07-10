@@ -95,8 +95,6 @@ parser.add_argument('--old-weights', action='store_true', default=False,
                     help='load LangVisNet weights on a LangVisUpsample module')
 parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
-parser.add_argument('--pin-memory', default=False, action='store_true',
-                     help='enable CUDA memory pin on DataLoader')
 parser.add_argument("--clip-grad", type=float, default=-1,
                     help='gradient clipping value')
 
