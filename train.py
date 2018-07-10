@@ -363,8 +363,8 @@ def train(epoch):
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear',
             align_corners=True).squeeze()
-        if args.gpu_pair is not None:
-            masks = masks.cuda(2*args.gpu_pair + 1)
+        # if args.gpu_pair is not None:
+        #     masks = masks.cuda(2*args.gpu_pair + 1)
 
         # current_loss = criterion(out_masks, masks)
 
