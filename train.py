@@ -362,7 +362,7 @@ def train(epoch):
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear',
-            align_corners=True)
+            align_corners=True).squeeze(0)
         # if args.gpu_pair is not None:
         #     masks = masks.cuda(2*args.gpu_pair + 1)
 
