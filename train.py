@@ -95,11 +95,6 @@ parser.add_argument('--old-weights', action='store_true', default=False,
                     help='load LangVisNet weights on a LangVisUpsample module')
 parser.add_argument('--norm', action='store_true',
                     help='enable language/visual features L2 normalization')
-parser.add_argument('--gpu-pair', type=int, default=None,
-                    help='gpu pair to use: either 0 (GPU0 and GPU1) or 1 (GPU2 and GPU3)')
-parser.add_argument('--accum-iters', default=100, type=int,
-                     help='number of gradient accumulated iterations to wait '
-                          'before update')
 parser.add_argument('--pin-memory', default=False, action='store_true',
                      help='enable CUDA memory pin on DataLoader')
 parser.add_argument("--clip-grad", type=float, default=-1,
