@@ -9,14 +9,15 @@ import numpy as np
 from sru import SRU
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from .dpn.model_factory import create_model
 
 
 class LangVisNet(nn.Module):
     def __init__(self, backend='dpn92', pretrained=True, extra=True, gpu_pair=None):
         super().__init__()
-        self.gpu_pair = gpu_pair
+        self.high_res = high_res
+        self.vis_size = vis_size
+        self.num_filters = num_filters
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -24,21 +25,25 @@ class LangVisNet(nn.Module):
             self.base = create_model(
                 backend, 1, pretrained=pretrained)
 
-        self.output_collapse = nn.Conv2d(in_channels=2688,
+        if not self.high_res:
+            self.output_collapse = nn.Conv2d(in_channels=self.vis_size,
                                              out_channels=1,
                                              kernel_size=1)
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        vis, base_features = self.base(vis)
+        with torch.set_grad_enabled(self.visual_freeze):
+            vis, base_features = self.base(vis)
+        vis = vis.requires_grad_()
+
         if self.gpu_pair is not None:
             vis = vis.cuda(self.first_gpu)
 
         # Generate channels of 'x' and 'y' info
         B, C, H, W = vis.size()
         spatial = self.generate_spatial_batch(H, W)
-        
-        output = self.output_collapse(vis)
+        if not self.high_res:
+            output = self.output_collapse(vis)
         return output, base_features
 
     def load_state_dict(self, new_state):
@@ -67,7 +72,64 @@ class LangVisNet(nn.Module):
                 spatial_batch_val[0, :, h, w] = (
                     [xmin, ymin, xmax, ymax,
                      xctr, yctr, 1 / featmap_W, 1 / featmap_H])
-        return Variable(torch.from_numpy(spatial_batch_val)).cuda()
+        return torch.from_numpy(spatial_batch_val).cuda()
+
+
+class UpsamplingModule(nn.Module):
+    def __init__(self, in_channels, upsampling_channels=1,
+                 mode='bilineal', ker_size=3,
+                 amplification=32, non_linearity=False,
+                 feature_channels=[2688, 1552, 704, 336, 64]):
+        super().__init__()
+        self.ker_size = ker_size
+        self.upsampling_channels = upsampling_channels
+        self.non_linearity = non_linearity
+        self.up = nn.Upsample(scale_factor=2, mode=mode)
+        self.convs = []
+        num_layers = int(np.log2(amplification))
+
+        i = 0
+        for out_channels in np.logspace(
+                9, 10 - num_layers, num=num_layers, base=2, dtype=int):
+            self.convs.append(self._make_conv(
+                int(in_channels) + feature_channels[i], int(out_channels)))
+            i += 1
+            in_channels = int(out_channels)
+
+        self.out_layer = nn.Conv2d(in_channels=in_channels,
+                                   out_channels=1,
+                                   kernel_size=1,
+                                   padding=0)
+        # self.convs.append(out_layer)
+        self.convs = nn.ModuleList(self.convs)
+
+    def _make_conv(self, in_channels, out_channels):
+        conv = nn.Conv2d(in_channels=in_channels,
+                         out_channels=out_channels,
+                         kernel_size=self.ker_size,
+                         padding=(self.ker_size // 2))
+
+        if self.non_linearity:
+            conv = nn.Sequential(self.up, conv, nn.PReLU())
+        else:
+            conv = nn.Sequential(self.up, conv)
+
+        return conv
+
+    def forward(self, x, features):
+        # Apply all layers
+        i = len(features) - 1
+        for conv in self.convs:
+            if ((x.size(-2), x.size(-1)) != (
+                    features[i].size(-2), features[i].size(-1))):
+                x = F.upsample(
+                    x, (features[i].size(-2), features[i].size(-1)),
+                    mode='bilinear', align_corners=True)
+            x = torch.cat([x, features[i]], dim=1)
+            x = conv(x)
+            i -= 1
+        x = self.out_layer(x)
+        return x
 
 
 class LangVisUpsample(nn.Module):
@@ -76,7 +138,14 @@ class LangVisUpsample(nn.Module):
         self.langvis = LangVisNet()
 
     def forward(self, vis, lang):
-        out, _ = self.langvis(vis, lang)
+        if self.langvis_freeze:
+            vis = vis.detach()
+            lang = lang.detach()
+        out, features = self.langvis(vis, lang)
+        if self.langvis_freeze:
+            out = out.data.requires_grad_()
+        if self.high_res:
+            out = self.upsample(out, features)
         return out
 
     def load_state_dict(self, new_state):
