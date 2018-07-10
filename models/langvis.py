@@ -18,6 +18,7 @@ class LangVisNet(nn.Module):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
+        self.visual_freeze = False
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -32,8 +33,8 @@ class LangVisNet(nn.Module):
 
     def forward(self, vis, lang):
         # Run image through base FCN
-        with torch.set_grad_enabled(self.visual_freeze):
-            vis, base_features = self.base(vis)
+        # with torch.set_grad_enabled(self.visual_freeze):
+        vis, base_features = self.base(vis)
         vis = vis.requires_grad_()
 
         if self.gpu_pair is not None:
