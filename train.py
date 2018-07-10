@@ -260,7 +260,9 @@ if not osp.exists(args.save_folder) and args.rank == 0:
     os.makedirs(args.save_folder)
 
 
-net = LangVisUpsample()
+net = LangVisUpsample(high_res=args.high_res,
+                      backend=args.backend,
+                      vis_size=args.vis_size)
 
 if osp.exists(args.snapshot) and args.rank == 0:
     print('Loading state dict from: {0}'.format(args.snapshot))

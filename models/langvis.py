@@ -13,11 +13,11 @@ from .dpn.model_factory import create_model
 
 
 class LangVisNet(nn.Module):
-    def __init__(self, backend='dpn92', pretrained=True, extra=True, gpu_pair=None):
+    def __init__(self, backend='dpn92', pretrained=True, extra=True,
+                 high_res=False, vis_size=4688):
         super().__init__()
         self.high_res = high_res
         self.vis_size = vis_size
-        self.num_filters = num_filters
         if backend == 'dpn92':
             self.base = create_model(
                 backend, 1, pretrained=pretrained, extra=extra)
@@ -41,7 +41,7 @@ class LangVisNet(nn.Module):
 
         # Generate channels of 'x' and 'y' info
         B, C, H, W = vis.size()
-        spatial = self.generate_spatial_batch(H, W)
+        # spatial = self.generate_spatial_batch(H, W)
         if not self.high_res:
             output = self.output_collapse(vis)
         return output, base_features
@@ -60,7 +60,8 @@ class LangVisNet(nn.Module):
         https://github.com/chenxi116/TF-phrasecut-public/blob/master/util/processing_tools.py#L5
         and slightly modified
         """
-        spatial_batch_val = np.zeros((1, 8, featmap_H, featmap_W), dtype=np.float32)
+        spatial_batch_val = np.zeros(
+            (1, 8, featmap_H, featmap_W), dtype=np.float32)
         for h in range(featmap_H):
             for w in range(featmap_W):
                 xmin = w / featmap_W * 2 - 1
@@ -133,17 +134,14 @@ class UpsamplingModule(nn.Module):
 
 
 class LangVisUpsample(nn.Module):
-    def __init__(self):
+    def __init__(self, backend='dpn92', vis_size=4688, high_res=False):
         super().__init__()
-        self.langvis = LangVisNet()
+        self.high_res = high_res
+        self.langvis = LangVisNet(high_res=high_res, backend=backend,
+                                  vis_size=vis_size)
 
     def forward(self, vis, lang):
-        if self.langvis_freeze:
-            vis = vis.detach()
-            lang = lang.detach()
         out, features = self.langvis(vis, lang)
-        if self.langvis_freeze:
-            out = out.data.requires_grad_()
         if self.high_res:
             out = self.upsample(out, features)
         return out
