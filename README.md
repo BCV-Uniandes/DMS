@@ -160,7 +160,7 @@ We follow PEP8 and PEP257 style guidelines. Feel free to send a PR or create an 
 
 ## Citation
 
-``bibtex
+```bibtex
 @article{margffoy2018dmn,
   title={Dynamic Multimodal Instance Segmentation guided by natural language queries},
   author={{Margffoy-Tuay}, E.~A. and {P{\'e}rez}, J.~C. and {Botero}, E. and
@@ -168,4 +168,4 @@ We follow PEP8 and PEP257 style guidelines. Feel free to send a PR or create an 
   journal={arXiv preprint arXiv:1807.02257},
   year={2018}
 }
-``
+```
