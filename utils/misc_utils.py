@@ -25,17 +25,18 @@ def reporthook(count, block_size, total_size):
 
 
 class VisdomWrapper(Visdom):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, env=None, **kwargs):
         Visdom.__init__(self, *args, **kwargs)
+        self.env = env
         self.plots = {}
 
     def init_line_plot(self, name,
                        X=torch.zeros((1,)).cpu(),
                        Y=torch.zeros((1,)).cpu(), **opts):
-        self.plots[name] = self.line(X=X, Y=Y, opts=opts)
+        self.plots[name] = self.line(X=X, Y=Y, env=self.env, opts=opts)
 
     def plot_line(self, name, **kwargs):
-        self.line(win=self.plots[name], **kwargs)
+        self.line(win=self.plots[name], env=self.env, **kwargs)
 
 
 def generate_bilinear_filter(stride=32):
