@@ -34,14 +34,14 @@ class LangVisNet(nn.Module):
     def forward(self, vis, lang):
         # Run image through base FCN
         # with torch.set_grad_enabled(self.visual_freeze):
-        vis, base_features = self.base(vis)
-        vis = vis.requires_grad_()
+        output, base_features = self.base(vis)
+        output = output.requires_grad_()
 
         # Generate channels of 'x' and 'y' info
-        B, C, H, W = vis.size()
+        B, C, H, W = output.size()
         # spatial = self.generate_spatial_batch(H, W)
         if not self.high_res:
-            output = self.output_collapse(vis)
+            output = self.output_collapse(output)
         return output, base_features
 
     def load_state_dict(self, new_state):
