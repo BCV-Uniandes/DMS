@@ -54,9 +54,9 @@ bash download_data --path $PATH_TO_STORE_THE_DATASETS
 ## Training
 To train the model, you will need to provide the path to the directory that contains the aforementioned datasets, as well to other parameters required to train the model. To train the model with the low-resolution setup described on the original paper, please execute:
 
-``bash
+```bash
 python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DATASET --val $SPLIT_TO_EVALUATE --backend dpn92 --num-filters 10 --lang-layers 3 --mix-we --save-folder $PATH_TO_STORE WEIGHT_SNAPSHOTS --snapshot $PATH_TO_THE_SNAPSHOT_FILE --accum-iters 1
-``
+```
 
 To train the model on high-resolution, you just need to add the ``--high-res`` and ``--upsamp-amplification 32`` flags to the previous command. **Note:** The snapshot file must correspond to the low resolution weights.
 
@@ -65,16 +65,16 @@ To inspect all the available parameters and their description, please execute ``
 ## Evaluation
 To evaluate the model, you can define the ``--eval-first`` and ``--epochs 0`` parameter flags to ``dmn_pytorch.train`` as it follows:
 
-``bash
+```bash
 python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DATASET --val $SPLIT_TO_EVALUATE --backend dpn92 --num-filters 10 --lang-layers 3 --mix-we --save-folder $PATH_TO_STORE WEIGHT_SNAPSHOTS --snapshot $PATH_TO_THE_SNAPSHOT_FILE --epochs 0 --eval-first
-``
+```
 
 ## Results Visualization
 Additionally, you can visualize the results of the DMN model with a set of pretrained weights on visdom. To do so, you can execute the ``dmn_pytorch.visdom_display`` script as it follows:
 
-``sh
+```sh
 python -m dmn_pytorch.visdom_display --data $PATH_TO_STORE_THE_DATASETS --dataset $DATASET --val $SPLIT_TO_EVALUATE --backend dpn92 --num-filters 10 --lang-layers 3 --mix-we --num-images $NUMBER_OF_EXAMPLES_TO_DISPLAY --snapshot $PATH_TO_THE_SNAPSHOT_FILE --no-eval --visdom-url http://$HOST:$PORT --env $NAME_OF_THE_VISDOM_ENV
-``
+```
 
 ## Performance
 The pretrained weights provided below were trained on two phases: during the low-resolution phase, the DMN was trained on UNC during 24 epochs with a constant learning rate, which then were fine-tuned for the remaining datasets during 10 epochs. Finally, the high-resolution phase was done over all the datasets using the weights from the previous phase during a total number of 4 epochs.
@@ -145,21 +145,20 @@ The pretrained weights provided below were trained on two phases: during the low
 ## External Installation
 The DMN can be used and imported as a regular Python package on your scripts. To install it, you can use pip:
 
-``sh
+```sh
 pip install -U .
-``
+```
 
 Then you can import it as it follows:
 
-``python
+```python
 from dmn_pytorch import DMN
-``
+```
 
 ## Contribution Guidelines
 We follow PEP8 and PEP257 style guidelines. Feel free to send a PR or create an issue if you have any problem/question.
 
 ## Citation
-
 ```bibtex
 @article{margffoy2018dmn,
   title={Dynamic Multimodal Instance Segmentation guided by natural language queries},
