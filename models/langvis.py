@@ -139,7 +139,7 @@ class LangVisUpsample(nn.Module):
                                   vis_size=vis_size)
         if self.high_res:
             self.upsample = UpsamplingModule(vis_size, 50,
-                                             'bilineal', 3, 32,
+                                             'bilinear', 3, 32,
                                              False)
     def forward(self, vis, lang):
         out, features = self.langvis(vis, lang)
