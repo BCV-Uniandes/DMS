@@ -87,7 +87,7 @@ The pretrained weights provided below were trained on two phases: during the low
             <th>High-Resolution Pretrained Weights</th>
             <th>Splits</th>
             <th>Performance (mIoU)</th>
-            <th>Reference IoU</th>
+            <!-- <th>Reference IoU</th> -->
         </tr>
     </thead>
     <tbody>
