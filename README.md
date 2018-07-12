@@ -98,8 +98,8 @@ python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DAT
         </tr>
         <tr>
             <td rowspan=3>UNC</td>
-            <td rowspan=2><a href="./examples/unc.md">UNC Examples</a></td>
-            <td rowspan=2><a href="./examples/referit.md">Link</a></td>
+            <td rowspan=3><a href="./examples/unc.md">UNC Examples</a></td>
+            <td rowspan=3><a href="./examples/referit.md">Link</a></td>
             <td>val</td>
             <td>0.4978</td>
         </tr>
@@ -113,8 +113,8 @@ python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DAT
         </tr>
         <tr>
             <td rowspan=3>UNC+</td>
-            <td rowspan=2><a href="./examples/unc+.md">UNC+ Examples</a></td>
-            <td rowspan=2><a href="./examples/referit.md">Link</a></td>
+            <td rowspan=3><a href="./examples/unc+.md">UNC+ Examples</a></td>
+            <td rowspan=3><a href="./examples/referit.md">Link</a></td>
             <td>val</td>
             <td>0.3888</td>
         </tr>
@@ -128,8 +128,8 @@ python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DAT
         </tr>
         <tr>
             <td>GRef</td>
-            <td rowspan=2><a href="./examples/gref.md">GRef Examples</a></td>
-            <td rowspan=2><a href="./examples/referit.md">Link</a></td>
+            <td><a href="./examples/gref.md">GRef Examples</a></td>
+            <td><a href="./examples/referit.md">Link</a></td>
             <td>val</td>
             <td>0.3764</td>
         </tr>
