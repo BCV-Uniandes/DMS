@@ -77,26 +77,51 @@ python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DAT
 <table>
     <thead>
         <tr>
-            <th>Layer 1</th>
-            <th>Layer 2</th>
-            <th>Layer 3</th>
+            <th>Dataset</th>
+            <th>Splits</th>
+            <th>Performance (mIoU)</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td rowspan=4>L1 Name</td>
-            <td rowspan=2>L2 Name A</td>
-            <td>L3 Name A</td>
+            <td rowspan=2>Referit</td>
+            <td>val</td>
+            <td>0.5328</td>
         </tr>
         <tr>
-            <td>L3 Name B</td>
+            <td>test</td>
+            <td>0.5281</td>
         </tr>
         <tr>
-            <td rowspan=2>L2 Name B</td>
-            <td>L3 Name C</td>
+            <td rowspan=3>UNC</td>
+            <td>val</td>
+            <td>0.4978</td>
         </tr>
         <tr>
-            <td>L3 Name D</td>
+            <td>testA</td>
+            <td>0.5484</td>
+        </tr>
+        <tr>
+            <td>testB</td>
+            <td>0.4520</td>
+        </tr>
+        <tr>
+            <td rowspan=3>UNC+</td>
+            <td>val</td>
+            <td>0.3888</td>
+        </tr>
+        <tr>
+            <td>testA</td>
+            <td>0.4425</td>
+        </tr>
+        <tr>
+            <td>testB</td>
+            <td>0.3249</td>
+        </tr>
+        <tr>
+            <td>GRef</td>
+            <td>val</td>
+            <td>0.3764</td>
         </tr>
     </tbody>
 </table>
