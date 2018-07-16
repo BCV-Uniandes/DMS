@@ -51,7 +51,7 @@ setup(
     author_email='andfoy@gmail.com',
     description='Semantic Segmentation based on Natural Language Queries',
     long_description=get_description(),
-    packages=find_packages(exclude=['utils', 'contrib', 'docs', 'tests*']),
+    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=REQUIREMENTS,
     include_package_data=True,
     classifiers=[
