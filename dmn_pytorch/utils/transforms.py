@@ -92,6 +92,7 @@ class ResizeImage:
             mode='bilinear').squeeze().data
         return out
 
+
 class ResizeAnnotation:
     """Resize the largest of the sides of the annotation to a given size"""
     def __init__(self, size):
@@ -106,7 +107,8 @@ class ResizeAnnotation:
         resized_h = int(np.round(im_h * scale))
         resized_w = int(np.round(im_w * scale))
         out = F.upsample(
-            Variable(img).unsqueeze(0).unsqueeze(0), size=(resized_h, resized_w),
+            Variable(img).unsqueeze(0).unsqueeze(0),
+            size=(resized_h, resized_w),
             mode='bilinear').squeeze().data
         return out
 
