@@ -10,3 +10,5 @@
 
 from .models import DMN, BaseDMN
 from .referit_loader import ReferDataset
+
+VERSION = (0, 1, 0, 'dev0')
