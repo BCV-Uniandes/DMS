@@ -13,8 +13,8 @@ import sys
 import cv2
 import json
 import uuid
+import tqdm
 import torch
-import progressbar
 import numpy as np
 import os.path as osp
 import scipy.io as sio
@@ -137,8 +137,7 @@ class ReferDataset(data.Dataset):
             self.corpus.load_file(vocab_file)
             torch.save(self.corpus, corpus_file)
 
-        bar = progressbar.ProgressBar()
-        for name in bar(im_list):
+        for name in tqdm.tqdm(im_list):
             im_filename = name.split('_', 1)[0] + '.jpg'
             if im_filename in ['19579.jpg', '17975.jpg', '19575.jpg']:
                 continue
@@ -179,8 +178,7 @@ class ReferDataset(data.Dataset):
         if not osp.exists(self.mask_dir):
             os.makedirs(self.mask_dir)
 
-        bar = progressbar.ProgressBar()
-        for ref in bar(refs):
+        for ref in tqdm.tqdm(refs):
             img_filename = 'COCO_train2014_{0}.jpg'.format(
                 str(ref['image_id']).zfill(12))
             if osp.exists(osp.join(self.im_dir, img_filename)):
