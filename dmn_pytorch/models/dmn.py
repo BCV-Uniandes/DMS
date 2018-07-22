@@ -102,7 +102,7 @@ class BaseDMN(nn.Module):
 
         self.emb = nn.Embedding(dict_size, emb_size)
         self.lang_model = SRU(emb_size, hid_size, num_layers=lang_layers,
-                              rescale=False)
+                              rescale=False, use_tanh=False)
         if lstm:
             self.lang_model = nn.LSTM(
                 emb_size, hid_size, num_layers=lang_layers)
