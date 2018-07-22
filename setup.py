@@ -16,7 +16,7 @@ import os.path as osp
 # Third party imports
 from setuptools import setup, find_packages
 
-PACKAGE = 'dmn-pytorch'
+PACKAGE = 'dmn_pytorch'
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
