@@ -12,4 +12,4 @@ from .models import DMN, BaseDMN
 from .referit_loader import ReferDataset
 
 VERSION_INFO = (0, 1, 0, 'dev0')
-__version__ = '.'.join(VERSION_INFO)
+__version__ = '.'.join(map(str, VERSION_INFO))
