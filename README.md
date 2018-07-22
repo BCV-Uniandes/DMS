@@ -29,7 +29,7 @@ pip install git+https://github.com/andfoy/refer.git
 
 Finally, you will need to install the Simple Recurrent Unit (SRU):
 ```bash
-pip install git+https://github.com/taolei87/sru.git
+pip install -U git+https://github.com/taolei87/sru.git --no-deps
 ```
 Conda packages will be created on future releases.
 
