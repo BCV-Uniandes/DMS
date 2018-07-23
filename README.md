@@ -73,7 +73,7 @@ python -u -m dmn_pytorch.train --data $PATH_TO_STORE_THE_DATASETS --dataset $DAT
 Additionally, you can visualize the results of the DMN model with a set of pretrained weights on visdom. To do so, you can execute the ``dmn_pytorch.visdom_display`` script as it follows:
 
 ```sh
-python -m dmn_pytorch.visdom_display --data $PATH_TO_STORE_THE_DATASETS --dataset $DATASET --val $SPLIT_TO_EVALUATE --backend dpn92 --num-filters 10 --lang-layers 3 --mix-we --num-images $NUMBER_OF_EXAMPLES_TO_DISPLAY --snapshot $PATH_TO_THE_SNAPSHOT_FILE --no-eval --visdom-url http://$HOST:$PORT --env $NAME_OF_THE_VISDOM_ENV
+python -m dmn_pytorch.visdom_display --data $PATH_TO_STORE_THE_DATASETS --dataset $DATASET --split $SPLIT_TO_EVALUATE --backend dpn92 --num-filters 10 --lang-layers 3 --mix-we --num-images $NUMBER_OF_EXAMPLES_TO_DISPLAY --snapshot $PATH_TO_THE_SNAPSHOT_FILE --no-eval --visdom http://$HOST:$PORT --env $NAME_OF_THE_VISDOM_ENV
 ```
 
 ## Performance

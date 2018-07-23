@@ -167,9 +167,11 @@ port = 80
 if visdom_url.port is not None:
     port = visdom_url.port
 
+url = visdom_url.scheme + '://' + visdom_url.hostname
+
 print('Initializing Visdom frontend at: {0}:{1}'.format(
       args.visdom, port))
-vis = Visdom(server=visdom_url.geturl(), port=port)
+vis = Visdom(server=url, port=port)
 
 
 def visualization():
