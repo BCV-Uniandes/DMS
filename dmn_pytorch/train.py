@@ -275,8 +275,6 @@ def train(epoch):
         out_masks = net(imgs, words)
         out_masks = F.upsample(out_masks, size=(
             masks.size(-2), masks.size(-1)), mode='bilinear').squeeze()
-        if args.gpu_pair is not None:
-            masks = masks.cuda(2*args.gpu_pair + 1)
         loss += criterion(out_masks, masks)
 
         if batch_idx % args.accum_iters == 0:
