@@ -287,7 +287,7 @@ class UpsamplingModule(nn.Module):
         tensor that contains a single segmentation mask map.
     """
 
-    def __init__(self, in_channels, mode='bilineal', ker_size=3,
+    def __init__(self, in_channels, mode='bilinear', ker_size=3,
                  amplification=32, non_linearity=False,
                  feature_channels=[2688, 1552, 704, 336, 64]):
         super().__init__()
@@ -400,7 +400,7 @@ class DMN(nn.Module):
             to produce a low-resolution segmentation map with a single channel.
             Default: ``False``
         upsampling_mode: Usampling mode, see :class:`torch.nn.Upsample`.
-            Default: `bilineal`
+            Default: `bilinear`
         upsampling_size: Kernel size for each upsampling convolution step.
             Default: 3
         upsampling_amplification: Amplification zoom to apply, it must be a
