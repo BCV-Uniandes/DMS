@@ -94,7 +94,7 @@ The pretrained weights provided below were trained on two phases: during the low
         <tr>
             <td rowspan=2>Referit</td>
             <td rowspan=2><a href="./examples/referit.md">Referit Examples</a></td>
-            <td rowspan=2><a href="./examples/referit.md">Link</a></td>
+            <td rowspan=2><a href="http://marr.uniandes.edu.co/weights/dmn/highres/dmn_referit_weights.pth">Link</a></td>
             <td>val</td>
             <td>0.5328</td>
         </tr>
@@ -105,7 +105,7 @@ The pretrained weights provided below were trained on two phases: during the low
         <tr>
             <td rowspan=3>UNC</td>
             <td rowspan=3><a href="./examples/unc.md">UNC Examples</a></td>
-            <td rowspan=3><a href="./examples/referit.md">Link</a></td>
+            <td rowspan=3><a href="http://marr.uniandes.edu.co/weights/dmn/highres/dmn_unc_weights.pth">Link</a></td>
             <td>val</td>
             <td>0.4978</td>
         </tr>
@@ -120,7 +120,7 @@ The pretrained weights provided below were trained on two phases: during the low
         <tr>
             <td rowspan=3>UNC+</td>
             <td rowspan=3><a href="./examples/unc+.md">UNC+ Examples</a></td>
-            <td rowspan=3><a href="./examples/referit.md">Link</a></td>
+            <td rowspan=3><a href="http://marr.uniandes.edu.co/weights/dmn/highres/dmn_unc%2B_weights.pth">Link</a></td>
             <td>val</td>
             <td>0.3888</td>
         </tr>
@@ -135,7 +135,7 @@ The pretrained weights provided below were trained on two phases: during the low
         <tr>
             <td>GRef</td>
             <td><a href="./examples/gref.md">GRef Examples</a></td>
-            <td><a href="./examples/referit.md">Link</a></td>
+            <td><a href="http://marr.uniandes.edu.co/weights/dmn/highres/dmn_gref_weights.pth">Link</a></td>
             <td>val</td>
             <td>0.3764</td>
         </tr>
