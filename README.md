@@ -161,7 +161,7 @@ We follow PEP8 and PEP257 style guidelines. Feel free to send a PR or create an 
 ```bibtex
 @article{margffoy2018dmn,
   title={Dynamic Multimodal Instance Segmentation guided by natural language queries},
-  author={{Margffoy-Tuay}, E and {P{\'e}rez}, J.~C. and {Botero}, E. and
+  author={{Margffoy-Tuay}, E. and {P{\'e}rez}, J.~C. and {Botero}, E. and
 	{Arbel{\'a}ez}, P.},
   journal={European Conference on Computer Vision (ECCV)},
   year={2018}
