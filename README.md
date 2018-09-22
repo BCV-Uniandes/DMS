@@ -1,4 +1,4 @@
-# dmn-pytorch
+# dms-pytorch
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/992bf5adf488489d8ea55998895793c7)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=andfoy/query-objseg&amp;utm_campaign=Badge_Grade)
 <!-- [![Build Status](http://157.253.243.11/job/query-objseg/job/master/badge/icon)](http://157.253.243.11/job/query-objseg/job/master/) -->
