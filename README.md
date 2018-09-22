@@ -3,8 +3,10 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/992bf5adf488489d8ea55998895793c7)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=andfoy/query-objseg&amp;utm_campaign=Badge_Grade)
 <!-- [![Build Status](http://157.253.243.11/job/query-objseg/job/master/badge/icon)](http://157.253.243.11/job/query-objseg/job/master/) -->
 
-PyTorch code for [Dynamic Multimodal Instance Segmentation guided by natural language queries](http://openaccess.thecvf.com/content_ECCV_2018/papers/Edgar_Margffoy-Tuay_Dynamic_Multimodal_Instance_ECCV_2018_paper.pdf), ECCV 2018
+PyTorch code for [Dynamic Multimodal Instance Segmentation guided by natural language queries](http://openaccess.thecvf.com/content_ECCV_2018/papers/Edgar_Margffoy-Tuay_Dynamic_Multimodal_Instance_ECCV_2018_paper.pdf), ECCV 2018.
 
+[Project Page](https://biomedicalcomputervision.uniandes.edu.co/index.php/research?id=19)
+ 
 | ![horses](./examples/horses.png) |
 |:--:|
 | *A dark horse between three lighter horses* |
