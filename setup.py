@@ -44,7 +44,7 @@ REQUIREMENTS = []
 setup(
     name=PACKAGE,
     version=get_version(),
-    keywords=['Compputer Vision', 'Segmentation', 'NLP'],
+    keywords=['Computer Vision', 'Segmentation', 'NLP'],
     url='https://github.com/andfoy/query-objseg',
     license='MIT',
     author='Edgar Andrés Margffoy Tuay',
